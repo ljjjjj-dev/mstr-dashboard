@@ -99,7 +99,7 @@ def cached_json(url, ttl, transform=None, headers=()):
 def history_rows(data):
     """官网时间序列有 13MB、包含几十个标的，这里只留 MSTR 需要的字段。"""
     rows = next(item["values"] for item in data if item["ticker"] == "MSTR")
-    keep = ("mNav", "mNavEntVal", "marketCap", "btcNav", "btcHoldings", "price")
+    keep = ("mNav", "mNavEntVal", "marketCap", "btcNav", "btcHoldings", "price", "satsPerShare")
     return [{"date": row["date"][:10], **{k: row.get(k) for k in keep}} for row in rows]
 
 

@@ -181,6 +181,14 @@ function planCheckup(plan, dailyMovePct, price) { // 只检查计划写全没有
   return out;
 }
 
+function perShareHistory(rows) { // rows 从新到旧；每股含币量和隐含股数都由官网的 satsPerShare 换算
+  const asc = rows.filter(r => r.satsPerShare > 0 && r.btcHoldings > 0).map(r => ({ date: r.date, perShare: r.satsPerShare / 1e8, btc: r.btcHoldings, shares: r.btcHoldings / (r.satsPerShare / 1e8) })).reverse();
+  if (!asc.length) return null;
+  const first = asc[0], now = asc.at(-1), peak = asc.reduce((a, b) => b.perShare > a.perShare ? b : a);
+  const change = (a, b) => (b / a - 1) * 100;
+  return { asc, first, now, peak, fromPeak: change(peak.perShare, now.perShare), perShareChange: change(first.perShare, now.perShare), btcChange: change(first.btc, now.btc), sharesChange: change(first.shares, now.shares), sharesFromPeak: change(peak.shares, now.shares), btcFromPeak: change(peak.btc, now.btc) };
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { sma, rsiSeries, rsi, ema, macd, crossings, correlation, beta, toWeekly, sessionOf, extendedQuote, dcaSim, summarize, closesBelowAverage, evalRule, backtestRule, maxDrawdown, isDownside, planCheckup };
+  module.exports = { sma, rsiSeries, rsi, ema, macd, crossings, correlation, beta, toWeekly, sessionOf, extendedQuote, dcaSim, summarize, closesBelowAverage, evalRule, backtestRule, maxDrawdown, isDownside, planCheckup, perShareHistory };
 }

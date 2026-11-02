@@ -110,7 +110,7 @@ h2 { font: 700 15px/1.3 var(--song); letter-spacing: .04em; margin: 0; }
 .dca-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .dca-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 880px) { .dca-body { grid-template-columns: minmax(0, 1fr); } }
-#dcaChart, #mnavChart { height: 280px; }
+#dcaChart, #mnavChart, #psChart { height: 280px; }
 .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 @media (max-width: 880px) { .two { grid-template-columns: minmax(0, 1fr); } }
 .next { padding: 8px 12px; font-size: 13.5px; background: var(--panel-2); border-radius: 6px; }
@@ -339,6 +339,18 @@ footer { font-size: 12px; color: var(--faint); }
       <div><div class="legend" id="mnavLegend" style="margin:0 0 6px"></div><div id="mnavChart"></div></div>
     </div>
     <p class="hint" id="mnavNote"></p>
+  </section>
+
+  <section class="panel card">
+    <div class="head"><h2 style="color:var(--fg)">每股含币量的走势</h2><button class="q" data-term="pershare" type="button" aria-label="解释每股含币量">?</button></div>
+    <div class="dca-body">
+      <div class="card">
+        <div class="v" id="psNow">--</div><p class="say note" id="psSay">正在读取官网历史数据…</p>
+        <dl class="facts" id="psFacts"></dl>
+      </div>
+      <div><div class="legend" style="margin:0 0 6px"><span><i style="background:var(--btc)"></i>每股对应的比特币（枚）</span></div><div id="psChart"></div></div>
+    </div>
+    <p class="hint">根据 Strategy 官网的每股持币数（BPS）。“股数”用持币数 ÷ 每股持币数换算，是官网口径的调整后股数，和普通股总数不同。这里没有扣除债务。持币和增发的日期可能错开，所以会有台阶式变化。</p>
   </section>
 
   <div class="two">
@@ -787,7 +799,7 @@ function renderQuestions(d) {
   $('qBtcT').textContent = corr;
   const k = S.kpi?.btc;
   $('qBtcS').textContent = k ? `比历史最高价 ${money(k.ath)} 低 ${Math.abs(k.drawdownFromAth).toFixed(1)}%。` : '';
-  renderMood(); renderDca(); renderHistory(); renderEvents();
+  renderMood(); renderDca(); renderHistory(); renderPerShare(); renderEvents();
 
   $('sentence').textContent = `现价在一年区间的${d.pos}（${d.place.toFixed(0)} 分），${both ? '高于' : none ? '低于' : '介于'}两条平均线，近期${fw}，${d.volWord}，和比特币${d.c >= 0.6 ? '走势很同步' : d.c >= 0.3 ? '有一定同步' : '不太同步'}。`;
   renderCompany();
@@ -874,14 +886,15 @@ function renderHistory() {
   const pick = f => { const s = summarize(rows, f); return s && { ...s, field: f }; };
   if (H.mode === 'official') {
     mnavMain.setData(series('mNav')); mnavSecond.setData(series('mNavEntVal'));
-    $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>现行官网 mNAV（2026 年 6 月起）</span><span><i style="background:var(--ma-long)"></i>企业价值 ÷ 持币价值（2025 年起）</span>`;
+    mnavMain.setMarkers(series('mNav').some(p => p.time === '2026-07-23') ? [{ time: '2026-07-23', position: 'aboveBar', shape: 'arrowDown', color: css('--fg'), text: '官网改定义' }] : []);
+    $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>现行算法（2026 年 6 月起）</span><span><i style="background:var(--ma-long)"></i>旧算法：企业价值 ÷ 持币价值（2025 年起）</span>`;
     const a = pick('mNav'), b = pick('mNavEntVal'), live = toNum(S.kpi?.btc?.mNav);
     $('mnavNow').textContent = (live > 0 ? live : all.find(r => r.mNav != null).mNav).toFixed(2) + ' 倍';
-    $('mnavSay').textContent = b ? `官网 mNAV 现在的数字。另一条企业价值算法现在是 ${b.now.toFixed(2)} 倍，高于这段时间 ${b.share.toFixed(0)}% 的日子。` : '官网 mNAV 现在的数字。';
-    $('mnavFacts').innerHTML = (a ? stat('官网', a) : '') + (b ? stat('企业价值', b) : '');
-    $('mnavNote').textContent = '两条线都来自 Strategy 官网，但算法不同，不能直接相减。橙线大致是“股价 ÷ 每股净持币价值”，从 2026 年 6 月 15 日才有数据；蓝线是“企业价值 ÷ 持币价值”，能看到更早的走势。虚线是 1 倍，低于它表示折价。';
+    $('mnavSay').textContent = b ? `官网现行算法的数字。旧算法现在约 ${b.now.toFixed(2)} 倍，高于这段时间 ${b.share.toFixed(0)}% 的日子。` : '官网现行算法的数字。';
+    $('mnavFacts').innerHTML = (a ? stat('现行算法', a) : '') + (b ? stat('旧算法', b) : '');
+    $('mnavNote').textContent = 'Strategy 官网说明：2026 年 7 月 23 日之前的 mNAV 是另一种指标，不能和现在直接比较。橙线是现行算法（股价 ÷ 每股净持币价值），官网数据从 2026 年 6 月 15 日开始，在 7 月 23 日没有明显跳变，看起来已按新算法回算，但官网没有明确写这一点。蓝线接近旧算法（企业价值 ÷ 持币价值），能看到更早的走势。两条线不能相减。虚线是 1 倍，低于它表示折价。';
   } else {
-    mnavMain.setData(series('simple')); mnavSecond.setData([]);
+    mnavMain.setData(series('simple')); mnavSecond.setData([]); mnavMain.setMarkers([]);
     $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>市值 ÷ 持币价值（我根据官网数据算的）</span>`;
     const a = pick('simple');
     $('mnavNow').textContent = a ? f2(a.now) : '--';
@@ -900,6 +913,21 @@ const segHist = (id, attr, apply) => $(id).addEventListener('click', e => {
 });
 segHist('mnavMode', 'mode', v => { H.mode = v; });
 segHist('mnavRange', 'm', v => { H.months = Number(v); });
+
+// --- Bitcoin per share ---
+const psChart = LightweightCharts.createChart($('psChart'), { ...baseOptions(), layout: { ...baseOptions().layout, attributionLogo: false }, rightPriceScale: { borderColor: css('--line'), minimumWidth: 72 }, localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: v => v.toFixed(5) } });
+const psLine = psChart.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false });
+let psKey = null;
+function renderPerShare() {
+  const h = S.history && perShareHistory(S.history); if (!h) return;
+  const n = v => v.toFixed(5) + ' 枚', sign = v => pct(v), row = (a, b) => `<div><dt>${a}</dt><dd>${b}</dd></div>`, m = v => (v / 1e8).toFixed(2) + ' 亿';
+  $('psNow').textContent = n(h.now.perShare);
+  const down = h.fromPeak < 0;
+  $('psSay').textContent = `从 ${dateCn(h.peak.date)} 的高点到现在，公司持币 ${sign(h.btcFromPeak)}，股数 ${sign(h.sharesFromPeak)}，所以每股含币量 ${sign(h.fromPeak)}。${down ? '股数增加得比持币快，就会这样。' : ''}`;
+  $('psFacts').innerHTML = row('最高', `${n(h.peak.perShare)}（${dateCn(h.peak.date)}）`) + row(`${dateCn(h.first.date)} 时`, n(h.first.perShare)) + row('那之后每股含币量', sign(h.perShareChange)) + row('那之后公司持币', sign(h.btcChange)) + row('那之后股数', `${sign(h.sharesChange)}（${m(h.first.shares)} → ${m(h.now.shares)}）`);
+  const key = h.asc.length + ':' + h.now.date;
+  if (key !== psKey) { psLine.setData(h.asc.map(x => ({ time: x.date, value: x.perShare }))); psChart.timeScale().fitContent(); psKey = key; }
+}
 
 // --- Earnings dates and holdings changes ---
 function renderEvents() {
@@ -1125,13 +1153,14 @@ const TERMS = {
   ma: '平均价就是过去一段时间每天收盘价的平均数。现价高于平均价，说明比这段时间的平均水平强；低于就是弱。50 天看几个月，200 天看一年左右。图上那两条线就是它们，专业叫法是“均线”。',
   vola: '这是把最近每天涨跌的幅度取平均。数字越大，账面上下越剧烈。MSTR 的波动通常比普通股票和比特币都大，持有前要想清楚自己能不能接受。',
   fear: '恐慌指标衡量的是大家的情绪。比特币情绪指数看币圈，0 最恐惧，100 最贪婪，数字由 Strategy 官网提供。VIX 看美股未来一个月的预期波动，大跌时往往飙升。恐慌时不一定是底部，恐慌可能持续很久甚至加深，所以它只能说明气氛，不能预测涨跌。',
+  pershare: '公司持有的比特币除以股数，就是每一股对应多少比特币。公司买币会让它上升，增发股票会让它下降。所以只看“公司持币越来越多”不够，要看每股对应的有没有变多。如果增发时股价有足够溢价，增发后每股含币量也可能上升；下降也不一定代表公司变差，比如筹到的钱可能用在别处。这里没有扣除债务，所以不是净值。',
   cost: '200 周平均价是比特币过去约 4 年的平均价，常被当作长期趋势线。全网平均持币成本（realized price）是所有比特币最后一次转移时价格的平均值，可以粗略理解为大家的平均成本。价格曾跌破过这两条线，它们不是不会被跌破的底部。',
   dca: '定投就是不管涨跌，每月投固定金额。价格低时买到的多，价格高时买到的少。定投均价是总投入除以买到的数量，也就是你平均花多少钱买到一股或一枚。这里只是用历史价格算账。定投能摊平买入价格，但不能保证赚钱，标的长期下跌时一样会亏。',
   rsi: '衡量最近 14 根 K 线上涨和下跌的相对力度，范围 0 到 100。日线看 14 天，周线看 14 周。常用 70 和 30 作为参考线，强势股可能长期停在高位，不能单独用来判断买卖。',
   cross: '短期均线上穿长期均线叫金叉，下穿叫死叉。均线是过去价格的平均，所以交叉总是滞后的，价格来回震荡时还会反复出现。',
   vol: '成交量是一天内成交的股数。放大说明这天比平时更活跃，常常伴随重要消息，但不能说明方向。',
   corr: '第一个数字是过去 60 个交易日的平均变动倍数，专业叫 Beta。比如 1.5 表示比特币涨 1% 时，MSTR 平均约涨 1.5%，跌的时候也一样。这是平均值，单日可能差很多，这个倍数也会随时间变化。相关系数看的是两者同步的程度，1 表示完全同向。',
-  mnav: 'MSTR 这家公司的主要资产是比特币。mNAV 就是看这份比特币被市场卖得贵还是便宜。现行算法大致是：股价 ÷ 每股对应的净持币价值（已扣除债务）。比如 1.10 倍，大致相当于花 1.10 美元买到价值 1 美元的比特币。大于 1 叫溢价，小于 1 叫折价。数字直接取自 Strategy 官网。官网页面上我没有查到完整公式，这个算法说法来自第三方开源项目，我用官网的盘前数字核对过是吻合的。',
+  mnav: 'MSTR 的主要资产是比特币。mNAV 看的是股价比每股实际对应的比特币贵多少。按 Strategy 官网现在的说明：分子是股价，分母是每股对应的比特币美元价值，并且已扣除债务、优先股等优先权益（再加回公司持有的美元资产）。比如 1.10 倍，大致相当于花 1.10 美元买到净值 1 美元的比特币。大于 1 叫溢价，小于 1 叫折价。官网特别说明：它不等于传统意义上的净资产价值，而且 2026 年 7 月 23 日之前 mNAV 指的是另一种指标，前后不能直接比较。',
 };
 document.addEventListener('click', e => {
   const btn = e.target.closest('.q'); if (!btn) return;
@@ -1293,7 +1322,7 @@ function renderSources() {
 }
 
 // --- Top navigation ---
-const NAV = [['总览', '.qs'], ['K 线', '.main'], ['mNAV', '#mnavChart'], ['财报和买卖', '#earnTable'], ['定投', '#dcaChart'], ['固定规则', '#exitSection'], ['技术信号', '#reviewBox'], ['提醒和持仓', '.bottom'], ['交易计划', '#planWhy'], ['数据来源', '#sourceBox']];
+const NAV = [['总览', '.qs'], ['K 线', '.main'], ['mNAV', '#mnavChart'], ['每股含币', '#psChart'], ['财报和买卖', '#earnTable'], ['定投', '#dcaChart'], ['技术信号', '#reviewBox'], ['提醒和持仓', '.bottom'], ['交易计划', '#planWhy'], ['数据来源', '#sourceBox']];
 function buildNav() {
   const spots = NAV.map(([name, sel]) => {
     const el = document.querySelector(sel), box = el && (el.closest('.qs, .main, .bottom, .two, section') || el);

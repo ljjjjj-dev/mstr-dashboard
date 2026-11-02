@@ -177,3 +177,23 @@ test('planCheckup：能指出缺什么，也能发现太近的价格规则', () 
   const tight = calc.planCheckup({ rules: [{ type: 'priceBelow', value: 95, note: 'x' }] }, 4, 100);
   assert.equal(tight.at(-1).ok, false);
 });
+
+test('perShareHistory：持币和股数都变时，算对每股含币量和变化', () => {
+  const r = calc.perShareHistory([
+    { date: 'c', satsPerShare: 150000, btcHoldings: 300 },
+    { date: 'x', satsPerShare: null, btcHoldings: 300 },
+    { date: 'b', satsPerShare: 200000, btcHoldings: 200 },
+    { date: 'a', satsPerShare: 100000, btcHoldings: 100 },
+  ]);
+  assert.equal(r.asc.length, 3);
+  close(r.now.perShare, 0.0015);
+  close(r.first.shares, 100000);
+  close(r.now.shares, 200000);
+  close(r.perShareChange, 50);
+  close(r.btcChange, 200);
+  close(r.sharesChange, 100);
+  assert.equal(r.peak.date, 'b');
+  close(r.fromPeak, -25);
+  close(r.sharesFromPeak, 100);
+  assert.equal(calc.perShareHistory([{ date: 'a', btcHoldings: 1 }]), null);
+});

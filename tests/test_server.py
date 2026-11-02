@@ -12,11 +12,12 @@ class DataShapes(unittest.TestCase):
     def test_history_keeps_only_mstr_fields(self):
         data = [
             {"ticker": "AAPL", "values": [{"date": "2026-10-30T00:00:00", "price": 1}]},
-            {"ticker": "MSTR", "values": [{"date": "2026-10-30T00:00:00", "price": 130.5, "mNav": 1.11, "extra": 9}]},
+            {"ticker": "MSTR", "values": [{"date": "2026-10-30T00:00:00", "price": 130.5, "mNav": 1.11, "satsPerShare": 187000, "extra": 9}]},
         ]
         rows = server.history_rows(data)
         self.assertEqual(rows[0]["date"], "2026-10-30")
         self.assertEqual(rows[0]["mNav"], 1.11)
+        self.assertEqual(rows[0]["satsPerShare"], 187000)
         self.assertIsNone(rows[0]["btcNav"])
         self.assertNotIn("extra", rows[0])
 
