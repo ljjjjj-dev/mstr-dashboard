@@ -1,0 +1,1192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MSTR 看盘</title>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }</script>
+<style>
+/* 一页看完：顶部是价格和交易时段，接着是白话问题，图表配读法和价位，下面是定投、信号和个人工具。默认浅色，可切换深色。 */
+:root {
+  color-scheme: light;
+  --ink: #f1f4f7; --panel: #ffffff; --panel-2: #e8edf2; --line: #d9e0e6; --grid: rgba(120,140,155,.2);
+  --fg: #17212b; --muted: #55646f; --faint: #85929c;
+  --up: #d63c30; --down: #0c8f62; --btc: #d9770b;
+  --ma-short: #b98a00; --ma-long: #2f6fd1; --cost: #17212b; --warn: #a86a00; --glow: rgba(217,119,11,.09);
+  --serif: "New York", ui-serif, "Songti SC", serif;
+  --song: "Songti SC", "STSong", serif;
+  --sans: -apple-system, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #0b1118; --panel: #111a23; --panel-2: #17222d; --line: #243240; --grid: rgba(36,50,64,.55);
+  --fg: #e9edf0; --muted: #93a3b1; --faint: #5f7080;
+  --up: #ef5b4c; --down: #2cc491; --btc: #f7931a;
+  --ma-short: #e8d8a8; --ma-long: #78a6e8; --cost: #f2f4f6; --warn: #f2c14e; --glow: rgba(247,147,26,.10);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.off { visibility: hidden; position: absolute; inset: 0; }
+body { margin: 0; color: var(--fg); font: 14px/1.6 var(--sans); background: var(--ink);
+  background-image: radial-gradient(900px 420px at 88% -120px, var(--glow), transparent 70%); background-attachment: fixed; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 24px 40px; padding-inline: max(16px, 2.4vw); display: grid; gap: 16px; }
+button { font: inherit; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+button:hover { color: var(--fg); border-color: var(--faint); }
+button.on { color: var(--ink); background: var(--fg); border-color: var(--fg); font-weight: 600; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--btc); outline-offset: 2px; }
+input, select { font: inherit; color: var(--fg); background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; min-width: 0; }
+input[type=number] { width: 112px; font-family: var(--mono); font-size: 13px; }
+a { color: var(--btc); }
+.up { color: var(--up); } .down { color: var(--down); }
+
+/* Hero */
+.hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 26px; }
+.who { display: grid; }
+.who b { font: 700 19px/1.2 var(--serif); letter-spacing: .08em; }
+.who span { font-size: 12px; color: var(--muted); }
+.quote { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+#price { font: 500 clamp(44px, 6vw, 64px)/1 var(--serif); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; border-radius: 6px; }
+#change { font: 500 17px var(--mono); }
+#priceLabel { font-size: 12px; color: var(--muted); }
+.flash { animation: flash .9s ease-out; }
+@keyframes flash { from { background: rgba(247,147,26,.28); } to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+#ext { font-size: 13px; color: var(--muted); padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+#ext b { font: 500 16px var(--mono); color: var(--fg); margin-inline: 4px; }
+.hero-right { margin-left: auto; display: grid; justify-items: end; gap: 4px; }
+.status { display: flex; align-items: center; gap: 8px; }
+#chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 2px 10px; border-radius: 99px; border: 1px solid currentColor; }
+#chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+#chip.live { color: var(--down); } #chip.ext { color: var(--btc); } #chip.closed { color: var(--muted); } #chip.bad { color: var(--warn); }
+#chip.live::before { animation: pulse 1.8s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { #chip.live::before { animation: none; } }
+#updated { font-size: 12px; color: var(--muted); text-align: right; }
+
+/* Session band */
+.band { display: grid; gap: 5px; }
+.tracks { position: relative; display: flex; height: 8px; border-radius: 4px; overflow: visible; background: var(--panel-2); }
+.tracks i { display: block; height: 100%; }
+.tracks i:first-child { border-radius: 4px 0 0 4px; } .tracks i:last-of-type { border-radius: 0 4px 4px 0; }
+.seg-pre, .seg-post { background: rgba(247,147,26,.28); } .seg-reg { background: rgba(44,196,145,.42); }
+#now { position: absolute; top: -4px; width: 2px; height: 16px; margin-left: -1px; background: var(--fg); box-shadow: 0 0 8px var(--fg); }
+.band-labels { position: relative; height: 18px; font: 11.5px var(--mono); color: var(--faint); }
+.band-labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.band-labels span:first-child { transform: none; } .band-labels span:last-child { transform: translateX(-100%); }
+@media (max-width: 560px) { .band-labels em { display: none; } }
+.band-labels em { font-style: normal; }
+#sentence { margin: 0; font: 500 16px/1.6 var(--song); color: var(--fg); text-wrap: pretty; }
+
+/* Panels */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+h2 { font: 700 15px/1.3 var(--song); letter-spacing: .04em; margin: 0; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
+.bottom { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1040px) { .main { grid-template-columns: minmax(0, 1fr); } .bottom { grid-template-columns: minmax(0, 1fr); } .hero-right { margin-left: 0; justify-items: start; } #updated { text-align: left; } }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; }
+.seg { display: flex; gap: 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 12px; color: var(--muted); margin-left: auto; }
+.legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+.stage { position: relative; flex: 1; min-height: clamp(340px, 50vh, 560px); }
+.chart-panel { display: flex; flex-direction: column; }
+#chart, #compare { position: absolute; inset: 0; }
+#ohlc { min-height: 44px; margin-bottom: 6px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+#ohlc b { font-weight: 600; color: var(--fg); }
+#cmpNote { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+
+/* Position readout */
+.read { display: grid; gap: 15px; align-content: start; }
+.item { display: grid; gap: 2px; border-top: 1px solid var(--line); padding-top: 11px; }
+.item:first-of-type { border-top: 0; padding-top: 0; }
+.head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.q { width: 18px; height: 18px; padding: 0; border-radius: 50%; font-size: 11px; line-height: 16px; color: var(--faint); }
+.v { font: 500 21px/1.3 var(--mono); }
+.note { margin: 0; font-size: 12.5px; color: var(--muted); }
+.explain { margin: 4px 0 2px; padding: 7px 10px; font-size: 12.5px; color: var(--fg); background: var(--panel-2); border-radius: 6px; }
+.ends { display: flex; justify-content: space-between; font: 11.5px var(--mono); color: var(--muted); }
+
+/* Plain-language layer */
+.dca-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.dca-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 880px) { .dca-body { grid-template-columns: minmax(0, 1fr); } }
+#dcaChart, #mnavChart { height: 280px; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 880px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.next { padding: 8px 12px; font-size: 13.5px; background: var(--panel-2); border-radius: 6px; }
+.next b { font-weight: 600; }
+.qs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1040px) { .qs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .qs { grid-template-columns: minmax(0, 1fr); } }
+.q-card { display: grid; gap: 4px; align-content: start; }
+.q-card .ask { font: 700 15px/1.4 var(--song); }
+.q-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.q-card .v { font-size: 26px; }
+.q-card .say { margin: 0; font-size: 13.5px; color: var(--fg); }
+.q-card .small { margin: 0; font-size: 12.5px; color: var(--muted); }
+.mini { position: relative; height: 6px; margin: 7px 0 2px; border-radius: 3px; background: var(--line); }
+.mini span { position: absolute; top: -3px; width: 8px; height: 12px; margin-left: -4px; border-radius: 3px; background: var(--fg); }
+.guide summary { font: 700 15px var(--song); cursor: pointer; }
+.guide svg { display: block; width: 100%; height: auto; margin: 8px 0 4px; }
+.guide svg text { font: 12.5px var(--sans); fill: var(--muted); }
+.guide svg .t { fill: var(--fg); font-weight: 600; }
+.guide ul { margin-top: 6px; }
+.guide li { display: block; font: 13px/1.6 var(--sans); color: var(--muted); padding: 7px 0 0; }
+.guide li b { color: var(--fg); font-weight: 600; }
+.facts { display: grid; gap: 7px; margin: 0; }
+.facts div { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; border-top: 1px solid var(--line); padding-top: 6px; font-size: 13px; color: var(--muted); }
+.facts dd { margin: 0; color: var(--fg); font: 500 13.5px var(--mono); text-align: right; }
+.facts dt { margin: 0; }
+
+/* Indicators */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+.chips label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.chips .sp { margin-left: auto; }
+#sub { height: 150px; border-top: 1px solid var(--line); margin-top: 4px; }
+
+/* Technical review */
+.review { display: grid; gap: 14px; }
+.review-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+#tally { font: 500 14px var(--mono); }
+.caution { margin: 0; padding: 8px 12px; font-size: 13px; color: var(--warn); border: 1px solid rgba(242,193,78,.35); border-radius: 6px; }
+.signals { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.signals li { display: grid; gap: 2px; align-content: start; padding: 9px 12px; font: 12.5px/1.55 var(--sans); color: var(--muted); background: var(--panel-2); border: 0; border-left: 3px solid var(--faint); border-radius: 6px; }
+.signals li b { color: var(--fg); font-weight: 600; }
+.signals li.bull { border-left-color: var(--up); } .signals li.bear { border-left-color: var(--down); }
+.ladder li { display: flex; justify-content: space-between; gap: 8px; font: 12px var(--mono); padding: 3px 0 0; }
+.ladder li.here { color: var(--panel); background: var(--fg); padding: 2px 6px; border: 0; border-radius: 4px; font-weight: 600; }
+.ladder small { color: var(--faint); font-size: 11.5px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font: 12.5px var(--mono); }
+th, td { text-align: right; padding: 5px 8px; border-top: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font: 500 12px var(--sans); border-top: 0; }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+
+/* Bottom cards */
+.card { display: grid; gap: 10px; align-content: start; }
+.form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.form label { font-size: 13px; color: var(--muted); }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+li { display: flex; justify-content: space-between; align-items: center; gap: 8px; font: 13px var(--mono); padding: 5px 0; border-top: 1px solid var(--line); }
+.empty { font: 13px var(--sans); color: var(--faint); }
+.hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+#banner { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; color: var(--ink); background: var(--warn); font-weight: 600; }
+#banner button { color: var(--ink); border-color: var(--ink); }
+#banner[hidden] { display: none; }
+footer { font-size: 12px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="who"><b>MSTR</b><span>Strategy Inc · 纳斯达克</span></div>
+    <div class="quote">
+      <span id="price">--</span>
+      <div><div id="change"></div><div id="priceLabel"></div></div>
+    </div>
+    <div id="ext" hidden></div>
+    <div class="hero-right">
+      <div class="status"><span id="chip" class="closed">载入中</span><button id="refresh" type="button">立即刷新</button><button id="themeToggle" type="button">深色模式</button></div>
+      <div id="updated">正在取行情…</div>
+    </div>
+  </header>
+
+  <div class="band">
+    <div class="tracks" id="tracks"><i class="seg-pre" id="segPre"></i><i class="seg-reg" id="segReg"></i><i class="seg-post" id="segPost"></i><span id="now" hidden></span></div>
+    <div class="band-labels" id="bandLabels"></div>
+  </div>
+  <p id="sentence">正在读取行情…</p>
+  <div id="banner" role="alert" hidden><span id="bannerText"></span><button id="bannerClose" type="button">知道了</button></div>
+
+  <div class="qs">
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">比起它持有的比特币，贵了多少？</span><button class="q" data-term="mnav" type="button" aria-label="解释 mNAV">?</button></div>
+      <div class="v" id="qMnav">--</div><p class="say" id="qMnavT">正在从官网读取…</p><p class="small" id="qMnavS"></p>
+    </section>
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">现在的价格，在一年里算高还是低？</span><button class="q" data-term="range" type="button" aria-label="解释一年位置">?</button></div>
+      <div class="v" id="qPlace">--</div><div class="mini"><span id="qPlacePin" style="left:0"></span></div><div class="ends"><span id="qLo"></span><span id="qHi"></span></div><p class="say" id="qPlaceT"></p>
+    </section>
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">最近几个月是涨势还是跌势？</span><button class="q" data-term="ma" type="button" aria-label="解释平均线">?</button></div>
+      <div class="v" id="qTrend">--</div><p class="say" id="qTrendT"></p><p class="small" id="qTrendS"></p>
+    </section>
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">这几周，涨的力量大还是跌的力量大？</span><button class="q" data-term="rsi" type="button" aria-label="解释 RSI">?</button></div>
+      <div class="v" id="qForce">--</div><p class="say" id="qForceT"></p><p class="small" id="qForceS"></p>
+    </section>
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">它平时一天能波动多少？</span><button class="q" data-term="vola" type="button" aria-label="解释波动">?</button></div>
+      <div class="v" id="qVola">--</div><p class="say" id="qVolaT"></p><p class="small" id="qVolaS"></p>
+    </section>
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">比特币现在怎么样？</span><button class="q" data-term="fear" type="button" aria-label="解释恐惧贪婪指数">?</button></div>
+      <div class="v" id="qBtc">--</div><p class="say" id="qBtcT"></p><p class="small" id="qBtcS"></p>
+    </section>
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">市场现在害怕吗？</span><button class="q" data-term="fear" type="button" aria-label="解释恐慌指标">?</button></div>
+      <div class="v" id="qFear">--</div><p class="say" id="qFearT"></p><p class="small" id="qFearS"></p>
+    </section>
+    <section class="panel card q-card">
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">比特币离长期成本线多远？</span><button class="q" data-term="cost" type="button" aria-label="解释长期成本线">?</button></div>
+      <div class="v" id="qCost">--</div><p class="say" id="qCostT"></p><p class="small" id="qCostS"></p>
+    </section>
+  </div>
+
+  <div class="main">
+    <section class="panel chart-panel">
+      <div class="toolbar">
+        <div class="seg" id="views">
+          <button data-view="day" class="on" type="button">日 K</button><button data-view="week" type="button">周 K</button><button data-view="compare" type="button">对比比特币</button>
+        </div>
+        <div class="seg" id="ranges">
+          <button data-m="3" type="button">3月</button><button data-m="6" class="on" type="button">6月</button><button data-m="12" type="button">1年</button><button data-m="24" type="button">2年</button><button data-m="60" type="button">5年</button>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="chips" id="chips">
+        <label><input id="showCross" type="checkbox" checked> 金叉死叉</label>
+        <label><input id="showEarn" type="checkbox" checked> 财报日</label>
+        <div class="seg sp" id="subs"><button data-sub="macd" class="on" type="button">MACD</button><button data-sub="rsi" type="button">RSI</button></div>
+      </div>
+      <div id="ohlc"></div>
+      <div class="stage">
+        <div id="chart"></div>
+        <div id="compare" class="off"></div>
+      </div>
+      <div id="sub"></div>
+      <p class="note" id="subNote"></p>
+      <p id="cmpNote" hidden></p>
+    </section>
+
+    <aside class="panel read">
+      <details class="guide" id="guide" open>
+        <summary>K 线怎么看（1 分钟学会）</summary>
+        <svg viewBox="0 0 310 190" role="img" aria-label="红色和绿色 K 线的结构示意">
+          <text class="t" x="52" y="16" text-anchor="middle">红色：这天收高了</text>
+          <line x1="52" y1="28" x2="52" y2="170" stroke="var(--up)" stroke-width="2"/><rect x="36" y="58" width="32" height="82" rx="2" fill="var(--up)"/>
+          <text x="76" y="33">最高价</text><text x="76" y="63">收盘价</text><text x="76" y="142">开盘价</text><text x="76" y="172">最低价</text>
+          <text class="t" x="214" y="16" text-anchor="middle">绿色：这天收低了</text>
+          <line x1="214" y1="28" x2="214" y2="170" stroke="var(--down)" stroke-width="2"/><rect x="198" y="58" width="32" height="82" rx="2" fill="var(--down)"/>
+          <text x="238" y="33">最高价</text><text x="238" y="63">开盘价</text><text x="238" y="142">收盘价</text><text x="238" y="172">最低价</text>
+        </svg>
+        <ul>
+          <li><b>一根 K 线就是一天的价格。</b>粗的部分是开盘到收盘，细线是这天到过的最高和最低价。</li>
+          <li><b>颜色只看当天。</b>收盘高于开盘是红色，低于开盘是绿色。所以比前一天跌了，也可能是红色。</li>
+          <li><b>两条线是平均价。</b>淡黄线是过去 50 天的平均，蓝线是过去 200 天的平均。</li>
+          <li><b>底部的柱子是成交量。</b>越高说明这天买卖越活跃。</li>
+          <li><b>动手试试：</b>把鼠标移到任意一根 K 线上，图上方会用白话读给你听。</li>
+        </ul>
+      </details>
+      <div class="item">
+        <div class="head">各个价位离现价多远</div>
+        <ul class="ladder" id="ladder"></ul>
+      </div>
+      <div class="item">
+        <div class="head">RSI（日线 / 周线） <button class="q" data-term="rsi" type="button" aria-label="解释 RSI">?</button></div>
+        <div class="v" id="rsiV">--</div>
+        <p class="note" id="rsiT"></p>
+      </div>
+      <div class="item">
+        <div class="head">成交量 <button class="q" data-term="vol" type="button" aria-label="解释成交量">?</button></div>
+        <div class="v" id="volV">--</div>
+        <p class="note" id="volT"></p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="panel card">
+    <div class="dca-top">
+      <div class="head"><h2 style="color:var(--fg)">mNAV 的过去和现在</h2><button class="q" data-term="mnav" type="button" aria-label="解释 mNAV">?</button></div>
+      <div class="seg" id="mnavMode"><button data-mode="official" class="on" type="button">官网数据</button><button data-mode="early" type="button">看更早（2020 起）</button></div>
+      <div class="seg" id="mnavRange"><button data-m="6" type="button">6月</button><button data-m="12" type="button">1年</button><button data-m="0" class="on" type="button">全部</button></div>
+    </div>
+    <div class="dca-body">
+      <div class="card">
+        <div class="v" id="mnavNow">--</div><p class="say note" id="mnavSay">正在读取官网历史数据…</p>
+        <dl class="facts" id="mnavFacts"></dl>
+      </div>
+      <div><div class="legend" id="mnavLegend" style="margin:0 0 6px"></div><div id="mnavChart"></div></div>
+    </div>
+    <p class="hint" id="mnavNote"></p>
+  </section>
+
+  <div class="two">
+    <section class="panel card">
+      <h2>财报日期</h2>
+      <div class="next" id="earnNext">正在读取…</div>
+      <div class="table-wrap"><table id="earnTable"></table></div>
+      <p class="hint">日期来自 Nasdaq，为美东时间，公司通常在收盘后公布。“下一交易日涨跌”比较公布当天和下一交易日的收盘价，只是事后记录，不代表以后也会这样。图上的“财报”标记就是这些日子。</p>
+    </section>
+    <section class="panel card">
+      <h2>公司买卖比特币记录</h2>
+      <div class="next" id="ledgerNext">正在读取…</div>
+      <div class="table-wrap"><table id="ledgerTable"></table></div>
+      <p class="hint">根据官网每日持币数的变化推算，日期可能和公告日差几天，也可能把相邻两笔合并。“当时币价”是当日比特币收盘价，不是公司实际成交价。实际成本请看 <a href="https://www.strategy.com/ledger" target="_blank" rel="noopener">官网账本</a>。</p>
+    </section>
+  </div>
+
+  <section class="panel card">
+    <div class="dca-top">
+      <div class="head"><h2 style="color:var(--fg)">如果当初定投，现在怎么样？</h2><button class="q" data-term="dca" type="button" aria-label="解释定投均价">?</button></div>
+      <div class="seg" id="dcaAsset"><button data-asset="mstr" class="on" type="button">MSTR</button><button data-asset="btc" type="button">比特币</button></div>
+      <div class="seg" id="dcaYears"><button data-y="1" type="button">1 年前</button><button data-y="2" type="button">2 年前</button><button data-y="3" class="on" type="button">3 年前</button><button data-y="5" type="button">5 年前</button></div>
+      <form class="form" id="dcaForm"><label for="dcaAmount">每月投</label><input id="dcaAmount" type="number" min="1" step="1" value="500"><label>美元</label></form>
+    </div>
+    <div class="dca-body">
+      <div class="card">
+        <div class="head" style="margin-top:6px">定投均价</div><div class="v" id="dcaAvg">--</div><p class="say note" id="dcaSay"></p>
+        <dl class="facts" id="dcaFacts"></dl>
+      </div>
+      <div><div class="legend" style="margin:0 0 6px"><span><i style="background:var(--fg)"></i>价格</span><span><i style="background:var(--btc)"></i>你的定投均价</span></div><div id="dcaChart"></div></div>
+    </div>
+    <p class="hint">历史模拟：假设每月第一个交易日按收盘价买入，可买零碎股，不含手续费、税费和汇率。过去的结果不代表未来，也不是定投建议。</p>
+  </section>
+
+  <section class="panel review card">
+    <div class="review-head">
+      <div class="head"><h2 style="color:var(--fg)">各项技术信号</h2></div>
+      <span id="tally"></span>
+    </div>
+    <p class="caution">这里只清点各项指标当前的状态，不判断买入或卖出时机，也不预测涨跌。信号的多少不代表胜率，请结合自己的资金情况独立决定，或咨询持牌顾问。</p>
+    <ul class="signals" id="signals"></ul>
+    <div class="card">
+      <div class="head"><h3 style="margin:0;font:700 13.5px var(--song);color:var(--fg)">50 日线和 200 日线的历史交叉</h3><button class="q" data-term="cross" type="button" aria-label="解释金叉死叉">?</button></div>
+      <div class="table-wrap"><table id="crossTable"></table></div>
+      <p class="hint" id="crossNote"></p>
+    </div>
+  </section>
+
+  <div class="bottom">
+    <section class="panel card">
+      <h2>到价提醒</h2>
+      <form class="form" id="alertForm">
+        <label for="alertDir">当价格</label>
+        <select id="alertDir"><option value="above">涨到或高于</option><option value="below">跌到或低于</option></select>
+        <input id="alertPrice" type="number" min="0.01" step="0.01" placeholder="美元" required>
+        <button type="submit">添加</button>
+      </form>
+      <ul id="alerts"></ul>
+      <div class="row">
+        <label class="check"><input id="extAlerts" type="checkbox"> 盘前盘后也提醒</label>
+        <label class="check"><input id="crossAlerts" type="checkbox" checked> 新交叉也提醒</label>
+        <label class="check"><input id="soundOn" type="checkbox" checked> 提示音</label>
+        <button id="soundTest" type="button">试听</button>
+      </div>
+      <p class="hint" id="soundHint"></p>
+      <p class="hint">每分钟检查一次，触发后顶部显示提示、响提示音并发 Mac 通知。需要页面开着、电脑没有睡眠。</p>
+    </section>
+
+    <section class="panel card">
+      <h2>我的持仓</h2>
+      <form class="form" id="posForm">
+        <label for="cost">成本价</label><input id="cost" type="number" min="0" step="0.01" placeholder="美元">
+        <label for="qty">股数</label><input id="qty" type="number" min="0" step="any" placeholder="可不填">
+      </form>
+      <div class="v" id="plV">--</div>
+      <p class="note" id="plT">填入成本价后，图上会出现一条白色虚线。</p>
+      <p class="hint">只保存在这台电脑的浏览器里，不会发到任何地方。没有计算手续费、税费和汇率。</p>
+    </section>
+
+    <section class="panel card">
+      <h2>公司持币情况</h2>
+      <dl class="facts" id="facts"><div><dt>正在从官网读取…</dt><dd></dd></div></dl>
+      <p class="hint" id="factsNote">数据来自 <a href="https://www.strategy.com" target="_blank" rel="noopener">strategy.com</a>，会自动更新，不用填写。</p>
+    </section>
+  </div>
+
+  <footer>行情来自 Yahoo Finance，mNAV、持币数和历史记录来自 Strategy 官网，财报日期来自 Nasdaq，都可能有延迟，下单前请以券商行情为准。本页只描述数据状态，不判断买卖时机，也不预测涨跌。时间均为北京时间。</footer>
+</div>
+
+<script src="/lightweight-charts.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const money = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pct = n => (n > 0 ? '+' : '') + n.toFixed(1) + '%';
+const dirClass = n => n > 0 ? 'up' : n < 0 ? 'down' : '';
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const bj = (t, opts) => new Date(t * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, ...opts });
+const hm = t => bj(t, { hour: '2-digit', minute: '2-digit' });
+
+// --- Pure calculations ---
+function sma(values, n) {
+  const out = []; let sum = 0;
+  values.forEach((v, i) => { sum += v; if (i >= n) sum -= values[i - n]; out.push(i >= n - 1 ? sum / n : null); });
+  return out;
+}
+function rsiSeries(closes, n = 14) { // Wilder smoothing
+  const out = closes.map(() => null);
+  if (closes.length <= n) return out;
+  let gain = 0, loss = 0;
+  for (let i = 1; i <= n; i++) { const d = closes[i] - closes[i - 1]; if (d > 0) gain += d; else loss -= d; }
+  gain /= n; loss /= n;
+  const value = () => loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+  out[n] = value();
+  for (let i = n + 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1];
+    gain = (gain * (n - 1) + Math.max(d, 0)) / n;
+    loss = (loss * (n - 1) + Math.max(-d, 0)) / n;
+    out[i] = value();
+  }
+  return out;
+}
+const rsi = (closes, n = 14) => rsiSeries(closes, n).at(-1);
+function ema(values, n) { // seeded with the SMA of the first n valid values
+  const out = values.map(() => null), k = 2 / (n + 1), start = values.findIndex(v => v != null);
+  if (start < 0 || values.length < start + n) return out;
+  let prev = values.slice(start, start + n).reduce((s, v) => s + v, 0) / n;
+  out[start + n - 1] = prev;
+  for (let i = start + n; i < values.length; i++) { prev = values[i] * k + prev * (1 - k); out[i] = prev; }
+  return out;
+}
+function macd(closes) {
+  const fast = ema(closes, 12), slow = ema(closes, 26);
+  const line = closes.map((_, i) => fast[i] != null && slow[i] != null ? fast[i] - slow[i] : null);
+  const signal = ema(line, 9);
+  return { line, signal, hist: line.map((v, i) => v != null && signal[i] != null ? v - signal[i] : null) };
+}
+function crossings(a, b, bars) { // gold: a moves above b; dead: a moves below b
+  const out = [];
+  for (let i = 1; i < a.length; i++) {
+    if (a[i] == null || b[i] == null || a[i - 1] == null || b[i - 1] == null) continue;
+    const before = a[i - 1] - b[i - 1], now = a[i] - b[i];
+    if (before <= 0 && now > 0) out.push({ i, time: bars[i].time, type: 'gold' });
+    else if (before >= 0 && now < 0) out.push({ i, time: bars[i].time, type: 'dead' });
+  }
+  return out;
+}
+function correlation(a, b) {
+  const ma = a.reduce((s, x) => s + x, 0) / a.length, mb = b.reduce((s, x) => s + x, 0) / b.length;
+  let ab = 0, aa = 0, bb = 0;
+  a.forEach((x, i) => { ab += (x - ma) * (b[i] - mb); aa += (x - ma) ** 2; bb += (b[i] - mb) ** 2; });
+  return ab / Math.sqrt(aa * bb);
+}
+function toWeekly(bars) { // one bar per Monday-based week, dated by its first trading day
+  const weeks = []; let key = null;
+  for (const b of bars) {
+    const d = new Date(b.time + 'T00:00:00Z');
+    const k = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10);
+    if (k !== key) { key = k; weeks.push({ ...b }); continue; }
+    const w = weeks.at(-1);
+    w.high = Math.max(w.high, b.high); w.low = Math.min(w.low, b.low); w.close = b.close; w.volume += b.volume;
+  }
+  return weeks;
+}
+function sessionOf(now, p) {
+  if (now < p.pre.start) return { key: 'wait', label: '休市', cls: 'closed' };
+  if (now < p.pre.end) return { key: 'pre', label: '盘前交易', cls: 'ext' };
+  if (now < p.regular.end) return { key: 'regular', label: '交易中', cls: 'live' };
+  if (now < p.post.end) return { key: 'post', label: '盘后交易', cls: 'ext' };
+  return { key: 'done', label: '休市', cls: 'closed' };
+}
+function extendedQuote(session, p, points, close) {
+  const from = session.key === 'pre' ? p.pre.start : (session.key === 'post' || session.key === 'done') ? p.regular.end : null;
+  if (from == null) return null;
+  const last = points.filter(x => x.time >= from).at(-1);
+  if (!last) return null;
+  return { price: last.close, time: last.time, change: (last.close / close - 1) * 100, label: session.key === 'pre' ? '盘前' : '盘后' };
+}
+const countdown = s => s >= 3600 ? `${Math.floor(s / 3600)} 小时 ${Math.floor(s % 3600 / 60)} 分` : `${Math.max(1, Math.ceil(s / 60))} 分钟`;
+
+// --- Data ---
+function parseDaily(json) {
+  const r = json.chart.result[0], q = r.indicators.quote[0], bars = [];
+  r.timestamp.forEach((t, i) => {
+    if ([q.open[i], q.high[i], q.low[i], q.close[i]].some(v => v == null)) return;
+    const time = new Date((t + r.meta.gmtoffset) * 1000).toISOString().slice(0, 10);
+    bars.push({ time, open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i], volume: q.volume[i] || 0 });
+  });
+  return { meta: r.meta, bars };
+}
+function parseIntraday(json) {
+  const r = json.chart.result[0], ts = r.timestamp || [], c = r.indicators.quote[0].close || [];
+  return { periods: r.meta.currentTradingPeriod, previousClose: r.meta.previousClose, points: ts.map((time, i) => ({ time, close: c[i] })).filter(x => x.close != null) };
+}
+async function getJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(url);
+  return res.json();
+}
+
+// --- Charts ---
+const baseOptions = () => ({
+  autoSize: true,
+  layout: { background: { color: 'transparent' }, textColor: css('--muted'), fontFamily: css('--mono'), fontSize: 11 },
+  grid: { vertLines: { color: css('--grid') }, horzLines: { color: css('--grid') } },
+  crosshair: { vertLine: { color: css('--faint'), labelBackgroundColor: css('--panel-2') }, horzLine: { color: css('--faint'), labelBackgroundColor: css('--panel-2') } },
+  rightPriceScale: { borderColor: css('--line') },
+  timeScale: { borderColor: css('--line') },
+  localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN' },
+});
+const chart = LightweightCharts.createChart($('chart'), { ...baseOptions(),
+  rightPriceScale: { borderColor: css('--line'), scaleMargins: { top: 0.09, bottom: 0.2 }, minimumWidth: 72 },
+  // 价格轴给成交量留了空间，低于 0 的刻度没有意义
+  localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: v => v < 0 ? '' : v.toFixed(2) } });
+const candles = chart.addCandlestickSeries({ upColor: css('--up'), downColor: css('--down'), borderVisible: false, wickUpColor: css('--up'), wickDownColor: css('--down') });
+const lineOpts = { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
+const maShort = chart.addLineSeries({ ...lineOpts, color: css('--ma-short') });
+const maLong = chart.addLineSeries({ ...lineOpts, color: css('--ma-long') });
+const volume = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', priceLineVisible: false, lastValueVisible: false });
+chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+
+const cmp = LightweightCharts.createChart($('compare'), { ...baseOptions(), localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: v => (v > 0 ? '+' : '') + v.toFixed(0) + '%' } });
+const cmpMstr = cmp.addLineSeries({ lineWidth: 2, color: css('--fg'), priceLineVisible: false, lastValueVisible: true, title: 'MSTR' });
+const cmpBtc = cmp.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false, lastValueVisible: true, title: 'BTC' });
+
+const sub = LightweightCharts.createChart($('sub'), { ...baseOptions(), rightPriceScale: { borderColor: css('--line'), minimumWidth: 72 }, timeScale: { visible: false }, layout: { ...baseOptions().layout, attributionLogo: false } });
+const subOpts = { priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false };
+const subHist = sub.addHistogramSeries({ ...subOpts, lastValueVisible: false });
+const subMacd = sub.addLineSeries({ ...subOpts, lineWidth: 1, color: css('--fg'), title: 'MACD' });
+const subSignal = sub.addLineSeries({ ...subOpts, lineWidth: 1, color: css('--btc'), title: '信号' });
+const subRsi = sub.addLineSeries({ ...subOpts, lineWidth: 1, color: css('--ma-short'), title: 'RSI', visible: false });
+for (const price of [70, 30]) subRsi.createPriceLine({ price, color: css('--faint'), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '' });
+let syncing = false;
+const linkRange = (from, to) => from.timeScale().subscribeVisibleLogicalRangeChange(r => {
+  if (!r || syncing) return;
+  syncing = true; to.timeScale().setVisibleLogicalRange(r); syncing = false;
+});
+linkRange(chart, sub); linkRange(sub, chart);
+// 副图从隐藏变为显示时才有尺寸，要在那时对齐主图
+new ResizeObserver(() => {
+  requestAnimationFrame(() => { const r = chart.timeScale().getVisibleLogicalRange(); if (r) sub.timeScale().setVisibleLogicalRange(r); });
+}).observe($('sub'));
+
+const S = { sub: 'macd', view: 'day', months: 6, mstr: null, btc: null, intraday: null, session: null, ext: null, price: null, btcPrice: null, drawnKey: null, prevPrice: null, fail: false, loadedAt: 0 };
+const VIEWS = { day: { short: 50, long: 200, name: '日' }, week: { short: 10, long: 40, name: '周' } };
+
+function bounds() {
+  const last = S.mstr.bars.at(-1).time, from = new Date(last + 'T00:00:00Z');
+  from.setUTCMonth(from.getUTCMonth() - S.months);
+  return { from: from.toISOString().slice(0, 10), to: last };
+}
+function legendFor() {
+  if (S.view === 'compare') return `<span><i style="background:var(--fg)"></i>MSTR</span><span><i style="background:var(--btc)"></i>比特币</span>`;
+  const v = VIEWS[S.view];
+  const unit = S.view === 'week' ? '周' : '天';
+  return `<span><i style="background:var(--ma-short)"></i>${v.short} ${unit}平均价</span><span><i style="background:var(--ma-long)"></i>${v.long} ${unit}平均价</span><span>红：收盘高于开盘</span>`;
+}
+function currentBars() { return S.view === 'week' ? toWeekly(S.mstr.bars) : S.mstr.bars; }
+const dark = document.documentElement.dataset.theme === 'dark';
+$('themeToggle').textContent = dark ? '浅色模式' : '深色模式';
+$('themeToggle').addEventListener('click', () => { try { localStorage.setItem('theme', dark ? 'light' : 'dark'); } catch {} location.reload(); });
+function draw(force) {
+  if (!S.mstr) return;
+  $('legend').innerHTML = legendFor();
+  const compare = S.view === 'compare';
+  // 隐藏的图表保留尺寸，切换时才能正常绘制
+  $('chart').classList.toggle('off', compare); $('compare').classList.toggle('off', !compare);
+  $('ohlc').hidden = compare; $('cmpNote').hidden = !compare; $('chips').hidden = compare; $('sub').hidden = compare; $('subNote').hidden = compare;
+  if (compare) return drawCompare();
+  const bars = currentBars(), last = bars.at(-1), key = [S.view, bars.length, last.close, last.volume].join();
+  if (key !== S.drawnKey) {
+    const v = VIEWS[S.view], closes = bars.map(b => b.close);
+    const line = vals => vals.map((value, i) => ({ time: bars[i].time, value })).filter(p => p.value != null);
+    candles.setData(bars.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
+    maShort.setData(line(sma(closes, v.short))); maLong.setData(line(sma(closes, v.long)));
+    volume.setData(bars.map(b => ({ time: b.time, value: b.volume, color: (b.close >= b.open ? css('--up') : css('--down')) + '55' })));
+    S.prevCloses = new Map(bars.map((b, i) => [b.time, i ? bars[i - 1].close : b.open]));
+    S.barMap = new Map(bars.map(b => [b.time, b]));
+    S.drawnKey = key; showOhlc(last); force = force || S.rangeUnset; S.rangeUnset = false;
+    drawSub(bars);
+  }
+  drawOverlays(bars);
+  if (force) {
+    chart.timeScale().setVisibleRange(bounds());
+    // 副图隐藏时尺寸为 0，重新显示后要再同步一次范围
+    requestAnimationFrame(() => { const r = chart.timeScale().getVisibleLogicalRange(); if (r) sub.timeScale().setVisibleLogicalRange(r); });
+  }
+}
+function drawSub(bars) {
+  const closes = bars.map(b => b.close), m = macd(closes), r = rsiSeries(closes);
+  const pts = vals => vals.map((value, i) => value == null ? { time: bars[i].time } : { time: bars[i].time, value });
+  subMacd.setData(pts(m.line)); subSignal.setData(pts(m.signal)); subRsi.setData(pts(r));
+  subHist.setData(m.hist.map((value, i) => value == null ? { time: bars[i].time } : { time: bars[i].time, value, color: (value >= 0 ? css('--up') : css('--down')) + '99' }));
+  applySub();
+}
+function applySub() {
+  const isMacd = S.sub === 'macd';
+  $('subNote').textContent = isMacd
+    ? 'MACD 看短期和中期动能的差距：白线在橙线上方，说明短期动能强于中期；红绿柱是两者的差。它是滞后的，也会反复交叉。'
+    : 'RSI 看近期涨跌力量，0 到 100，虚线是常用参考线 70 和 30。周 K 下显示的是周线 RSI。';
+  subHist.applyOptions({ visible: isMacd }); subMacd.applyOptions({ visible: isMacd }); subSignal.applyOptions({ visible: isMacd });
+  subRsi.applyOptions({ visible: !isMacd });
+}
+function drawOverlays(bars) {
+  const v = VIEWS[S.view], closes = bars.map(b => b.close);
+  const crosses = $('showCross').checked ? crossings(sma(closes, v.short), sma(closes, v.long), bars) : [];
+  const marks = crosses.map(c => c.type === 'gold'
+    ? { time: c.time, position: 'belowBar', shape: 'arrowUp', color: css('--warn'), text: '金叉' }
+    : { time: c.time, position: 'aboveBar', shape: 'arrowDown', color: css('--ma-long'), text: '死叉' });
+  if ($('showEarn').checked) for (const e of S.earn || []) {
+    // 周 K 上标在包含这一天的那根 K 线
+    const bar = bars.filter(b => b.time <= e.date).at(-1);
+    if (bar) marks.push({ time: bar.time, position: 'aboveBar', shape: 'circle', color: css('--btc'), text: '财报' });
+  }
+  candles.setMarkers(marks.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+}
+$('chips').addEventListener('change', () => { if (S.mstr && S.view !== 'compare') drawOverlays(currentBars()); });
+$('subs').addEventListener('click', e => {
+  const mode = e.target.dataset.sub; if (!mode) return;
+  S.sub = mode;
+  document.querySelectorAll('#subs button').forEach(b => b.classList.toggle('on', b === e.target));
+  applySub();
+});
+function drawCompare() {
+  const { from, to } = bounds(), btcAt = new Map(S.btc.bars.map(b => [b.time, b.close]));
+  const bars = S.mstr.bars.filter(b => b.time >= from && btcAt.has(b.time));
+  if (bars.length < 2) return;
+  const m0 = bars[0].close, b0 = btcAt.get(bars[0].time);
+  cmpMstr.setData(bars.map(b => ({ time: b.time, value: (b.close / m0 - 1) * 100 })));
+  cmpBtc.setData(bars.map(b => ({ time: b.time, value: (btcAt.get(b.time) / b0 - 1) * 100 })));
+  cmp.timeScale().setVisibleRange({ from: bars[0].time, to });
+  const lastBar = bars.at(-1), mChg = (lastBar.close / m0 - 1) * 100, bChg = (btcAt.get(lastBar.time) / b0 - 1) * 100;
+  $('cmpNote').textContent = `从 ${bars[0].time} 算起（两者都从 0% 出发）：MSTR ${pct(mChg)}，比特币 ${pct(bChg)}。`;
+}
+function showOhlc(b) {
+  const prev = S.prevCloses.get(b.time), chg = (b.close / prev - 1) * 100;
+  const week = S.view === 'week', span = week ? '这一周' : '这一天', prevName = week ? '上一周' : '前一天';
+  const red = b.close >= b.open;
+  $('ohlc').innerHTML = `<b>${week ? b.time + ' 这周' : b.time}</b>：开盘 <b>${money(b.open)}</b>，最高 <b>${money(b.high)}</b>，最低 <b>${money(b.low)}</b>，收盘 <b>${money(b.close)}</b>，成交 <b>${(b.volume / 1e6).toFixed(1)} 百万股</b>。<br>${span}是<span class="${red ? 'up' : 'down'}">${red ? '红' : '绿'}色</span>，因为收盘${red ? '不低于' : '低于'}开盘；比${prevName}收盘<span class="${dirClass(chg)}">${chg >= 0 ? '涨' : '跌'} ${Math.abs(chg).toFixed(1)}%</span>。`;
+}
+chart.subscribeCrosshairMove(param => {
+  if (!S.barMap) return;
+  const b = param.time ? S.barMap.get(param.time) : [...S.barMap.values()].at(-1);
+  if (b) showOhlc(b);
+});
+$('views').addEventListener('click', e => {
+  const view = e.target.dataset.view; if (!view) return;
+  S.view = view;
+  document.querySelectorAll('#views button').forEach(b => b.classList.toggle('on', b === e.target));
+  draw(true);
+});
+$('ranges').addEventListener('click', e => {
+  const m = Number(e.target.dataset.m); if (!m) return;
+  S.months = m;
+  document.querySelectorAll('#ranges button').forEach(b => b.classList.toggle('on', b === e.target));
+  draw(true);
+});
+
+// --- Header and session band ---
+function renderBand() {
+  const p = S.intraday?.periods; if (!p) return;
+  const now = Date.now() / 1000, start = p.pre.start, span = p.post.end - start;
+  const frac = t => (t - start) / span * 100;
+  $('segPre').style.width = frac(p.pre.end) + '%';
+  $('segReg').style.width = frac(p.regular.end) - frac(p.pre.end) + '%';
+  $('segPost').style.width = 100 - frac(p.regular.end) + '%';
+  const inside = now >= start && now <= p.post.end;
+  $('now').hidden = !inside;
+  if (inside) $('now').style.left = frac(now) + '%';
+  $('bandLabels').innerHTML = [[0, `${hm(p.pre.start)}<em> 盘前</em>`], [frac(p.pre.end), `${hm(p.regular.start)}<em> 开盘</em>`], [frac(p.regular.end), `${hm(p.regular.end)}<em> 收盘</em>`], [100, `${hm(p.post.end)}<em> 盘后结束</em>`]]
+    .map(([x, t]) => `<span style="left:${x}%">${t}</span>`).join('');
+}
+function renderStatus() {
+  if (!S.session) return;
+  const now = Date.now() / 1000, p = S.intraday.periods, tradeAge = now - S.mstr.meta.regularMarketTime;
+  const chip = $('chip');
+  if (S.fail) { chip.className = 'bad'; chip.textContent = '连接中断'; }
+  else if (S.session.key === 'regular' && tradeAge > 600) { chip.className = 'bad'; chip.textContent = '数据可能过期'; }
+  else { chip.className = S.session.cls; chip.textContent = S.session.label; }
+  let next = '';
+  if (S.session.key === 'wait' || S.session.key === 'pre') next = `距开盘 ${countdown(p.regular.start - now)} · `;
+  else if (S.session.key === 'regular') next = `距收盘 ${countdown(p.regular.end - now)} · `;
+  const ago = Math.round((Date.now() - S.loadedAt) / 1000);
+  $('updated').textContent = S.fail ? '取不到行情，提醒也已暂停，下面是上一次的数据。请检查网络，或重新双击“启动看盘.app”。'
+    : `${next}${ago < 5 ? '刚刚更新' : ago + ' 秒前更新'} · 每分钟自动刷新`;
+}
+function renderHeader() {
+  const { bars, meta } = S.mstr, closes = bars.map(b => b.close), price = meta.regularMarketPrice;
+  const prev = S.intraday.previousClose ?? closes.at(-2), chg = (price / prev - 1) * 100;
+  $('price').textContent = money(price); $('price').className = dirClass(chg);
+  if (S.prevPrice != null && S.prevPrice !== price) { $('price').classList.add('flash'); }
+  S.prevPrice = price;
+  $('change').textContent = `${price >= prev ? '+' : ''}${(price - prev).toFixed(2)}  ${pct(chg)}`;
+  $('change').className = dirClass(chg);
+  $('priceLabel').textContent = (S.session.key === 'regular' ? '盘中现价 · ' : '收盘价 · ') + bj(meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const e = S.ext;
+  $('ext').hidden = !e;
+  if (e) $('ext').innerHTML = `${e.label}<b>${money(e.price)}</b><span class="${dirClass(e.change)}">${pct(e.change)}</span> · ${hm(e.time)}`;
+  document.title = `${money(e ? e.price : price)} ${pct(e ? e.change + 0 : chg)} · MSTR`;
+}
+
+// --- Position readout ---
+function renderReadout() {
+  const { bars } = S.mstr, closes = bars.map(b => b.close), price = S.price;
+  const year = bars.slice(-252), hi = Math.max(...year.map(b => b.high)), lo = Math.min(...year.map(b => b.low));
+  const at = v => Math.min(100, Math.max(0, (v - lo) / (hi - lo) * 100));
+  const place = at(price), ma50 = sma(closes, 50).at(-1), ma200 = sma(closes, 200).at(-1);
+  const d50 = (price / ma50 - 1) * 100, d200 = (price / ma200 - 1) * 100;
+  const r = rsi(closes), weeklyBars = toWeekly(bars), rw = rsi(weeklyBars.map(b => b.close));
+  $('rsiV').innerHTML = `${r.toFixed(1)} <span style="color:var(--faint)">/</span> ${rw.toFixed(1)}`;
+  const rsiWord = r >= 70 ? '偏强区' : r <= 30 ? '偏弱区' : '中性区';
+  const rsiLevel = x => x >= 70 ? '高于 70' : x <= 30 ? '低于 30' : '在 30 到 70 之间';
+  $('rsiT').textContent = `日线${rsiLevel(r)}，看几周的强弱；周线${rsiLevel(rw)}，看几个月的强弱。本周未走完，周线数字还会变。`;
+  const avg = sma(bars.map(b => b.volume), 20).at(-2), ratio = bars.at(-1).volume / avg;
+  $('volV').textContent = ratio.toFixed(2) + ' 倍';
+  $('volT').textContent = `${bars.at(-1).time} 的成交量相对此前 20 日平均。` + (S.session.key === 'regular' ? '盘中还没走完，数字会偏小。' : '');
+  const btcBars = S.btc.bars, btcChg = (S.btcPrice / btcBars.at(-2).close - 1) * 100;
+  const byDate = new Map(btcBars.map(b => [b.time, b.close])), a = [], b = [], recent = bars.slice(-61);
+  for (let i = 1; i < recent.length; i++) {
+    const x = byDate.get(recent[i - 1].time), y = byDate.get(recent[i].time);
+    if (x && y) { a.push(recent[i].close / recent[i - 1].close - 1); b.push(y / x - 1); }
+  }
+  const c = correlation(a, b);
+  const volWord = ratio >= 1.5 ? '成交量放大' : ratio <= 0.7 ? '成交量偏低' : '成交量正常';
+  const maWord = d50 >= 0 && d200 >= 0 ? '在两条均线上方' : d50 < 0 && d200 < 0 ? '在两条均线下方' : d50 >= 0 ? '在 50 日线上方、200 日线下方' : '在 50 日线下方、200 日线上方';
+  const pos = place < 33 ? '偏低' : place > 67 ? '偏高' : '中段';
+  renderPosition();
+  renderReview({ price, ma50, ma200, r, rw, ratio, c });
+  renderQuestions({ price, place, hi, lo, d50, d200, ma50, ma200, r, c, closes, ratio, btcChg, rsiWord, volWord, pos });
+}
+
+// --- Six plain-language questions ---
+function forceWords(r) {
+  if (r >= 70) return ['上涨力量很强', '已经连涨了一段时间，常被认为偏热，但也可能继续强下去。'];
+  if (r >= 55) return ['上涨力量占优', '最近涨的日子和幅度多于跌的。'];
+  if (r > 45) return ['涨跌差不多', '最近买卖双方势均力敌。'];
+  if (r > 30) return ['下跌力量占优', '最近跌的日子和幅度多于涨的，但还没到极端。'];
+  return ['下跌力量很强', '已经连跌了一段时间，常被认为偏冷，但也可能继续弱下去。'];
+}
+function renderQuestions(d) {
+  $('qPlace').textContent = `第 ${d.place.toFixed(0)} 分`;
+  $('qPlacePin').style.left = d.place + '%'; $('qLo').textContent = '最低 ' + money(d.lo); $('qHi').textContent = '最高 ' + money(d.hi);
+  $('qPlaceT').textContent = `把一年最低价算 0 分、最高价算 100 分，现在在第 ${d.place.toFixed(0)} 分，属于${d.pos}。分数低不代表便宜。`;
+
+  const both = d.d50 >= 0 && d.d200 >= 0, none = d.d50 < 0 && d.d200 < 0;
+  $('qTrend').textContent = both ? '偏涨势' : none ? '偏跌势' : '方向不明';
+  $('qTrend').className = 'v ' + (both ? 'up' : none ? 'down' : '');
+  $('qTrendT').textContent = both ? '现价高于过去 50 天和 200 天的平均价。' : none ? '现价低于过去 50 天和 200 天的平均价。' : `现价高于一条平均线、低于另一条，还没有明确方向。`;
+  $('qTrendS').textContent = `50 天平均 ${money(d.ma50)}（现价${d.d50 >= 0 ? '高' : '低'} ${Math.abs(d.d50).toFixed(1)}%），200 天平均 ${money(d.ma200)}（现价${d.d200 >= 0 ? '高' : '低'} ${Math.abs(d.d200).toFixed(1)}%）。`;
+
+  const [fw, fs] = forceWords(d.r);
+  $('qForce').textContent = fw; $('qForce').className = 'v ' + (d.r >= 55 ? 'up' : d.r <= 45 ? 'down' : '');
+  $('qForceT').textContent = fs;
+  $('qForceS').textContent = `这个判断来自 RSI 指标，现在是 ${d.r.toFixed(0)}（范围 0 到 100，50 是平衡点）。`;
+
+  const moves = d.closes.slice(-61).map((v, i, a) => i ? Math.abs(v / a[i - 1] - 1) * 100 : null).filter(v => v != null);
+  const mean = moves.reduce((s, v) => s + v, 0) / moves.length;
+  $('qVola').textContent = `约 ±${mean.toFixed(1)}%`;
+  $('qVolaT').textContent = `近 60 个交易日，平均一天涨跌约 ${mean.toFixed(1)}%。假如持有 1 万美元，一天常见的账面变化约 $${Math.round(mean * 100).toLocaleString('en-US')}。`;
+  $('qVolaS').textContent = `其中最大的一天波动了 ${Math.max(...moves).toFixed(1)}%。这是过去的数字，以后可能更大。`;
+
+  $('qBtc').innerHTML = `${money(S.btcPrice)} <span class="${dirClass(d.btcChg)}" style="font-size:15px">${pct(d.btcChg)}</span>`;
+  const corr = `近 60 个交易日，MSTR 和比特币的${d.c >= 0.6 ? '走势很同步' : d.c >= 0.3 ? '走势有一定同步' : '走势不太同步'}（相关系数 ${d.c.toFixed(2)}）。`;
+  $('qBtcT').textContent = corr;
+  const k = S.kpi?.btc;
+  $('qBtcS').textContent = k ? `比历史最高价 ${money(k.ath)} 低 ${Math.abs(k.drawdownFromAth).toFixed(1)}%。` : '';
+  renderMood(); renderDca(); renderHistory(); renderEvents();
+
+  $('sentence').textContent = `现价在一年区间的${d.pos}（${d.place.toFixed(0)} 分），${both ? '高于' : none ? '低于' : '介于'}两条平均线，近期${fw}，${d.volWord}，和比特币${d.c >= 0.6 ? '走势很同步' : d.c >= 0.3 ? '有一定同步' : '不太同步'}。`;
+  renderCompany();
+}
+
+// --- Market mood and long-term cost lines ---
+function vixWords(v) {
+  if (v >= 35) return ['恐慌', '美股波动预期很高。'];
+  if (v >= 25) return ['紧张', '美股波动预期偏高。'];
+  if (v >= 15) return ['正常', '美股波动预期处在常见范围。'];
+  return ['平静', '美股波动预期偏低。'];
+}
+function renderMood() {
+  const k = S.kpi?.btc, fg = k?.fearGreedIndex, vix = S.vix;
+  const fearName = { 'Extreme Fear': '极度恐惧', Fear: '恐惧', Neutral: '中性', Greed: '贪婪', 'Extreme Greed': '极度贪婪' };
+  const fgText = fg ? `${fearName[fg.classification] || fg.classification} ${fg.value}` : null;
+  $('qFear').textContent = fgText || (vix ? `VIX ${vix.meta.regularMarketPrice.toFixed(1)}` : '--');
+  $('qFearT').textContent = fg ? `比特币市场情绪指数是 ${fg.value}（0 最恐惧，100 最贪婪）。` : '暂时取不到比特币情绪指数。';
+  if (vix) {
+    const v = vix.meta.regularMarketPrice, closes = vix.bars.map(b => b.close), share = closes.filter(x => x < v).length / closes.length * 100;
+    const [w, s] = vixWords(v);
+    $('qFearS').textContent = `美股恐慌指数 VIX ${v.toFixed(1)}，属于${w}。${s}高于过去 5 年 ${share.toFixed(0)}% 的日子。`;
+  } else $('qFearS').textContent = '暂时取不到 VIX。';
+  if (k && k.ma200w) {
+    const gap200 = (S.btcPrice / k.ma200w - 1) * 100, gapReal = (S.btcPrice / k.realizedPrice - 1) * 100;
+    $('qCost').textContent = `${gap200 >= 0 ? '高' : '低'} ${Math.abs(gap200).toFixed(0)}%`;
+    $('qCost').className = 'v';
+    $('qCostT').textContent = `现价比比特币过去 200 周的平均价 ${money(k.ma200w)} ${gap200 >= 0 ? '高' : '低'} ${Math.abs(gap200).toFixed(1)}%。`;
+    $('qCostS').textContent = `比全网平均持币成本 ${money(k.realizedPrice)} ${gapReal >= 0 ? '高' : '低'} ${Math.abs(gapReal).toFixed(1)}%。这两个数字来自 Strategy 官网。`;
+  } else { $('qCost').textContent = '--'; $('qCostT').textContent = '暂时取不到官网数据。'; $('qCostS').textContent = ''; }
+}
+
+// --- Dollar-cost averaging simulation ---
+function dcaSim(bars, monthly, years, lastPrice) { // buys at the close of each month's first bar
+  const end = new Date(bars.at(-1).time + 'T00:00:00Z'); end.setUTCFullYear(end.getUTCFullYear() - years);
+  const from = end.toISOString().slice(0, 10), series = [], buys = [];
+  let month = null, units = 0, spent = 0, worst = 0, worstTime = null;
+  for (const b of bars) {
+    if (b.time < from) continue;
+    const m = b.time.slice(0, 7);
+    if (m !== month) { month = m; units += monthly / b.close; spent += monthly; buys.push(b.time); }
+    const avg = spent / units, pl = b.close / avg - 1;
+    if (pl < worst) { worst = pl; worstTime = b.time; }
+    series.push({ time: b.time, price: b.close, avg });
+  }
+  if (!buys.length) return null;
+  const avg = spent / units, value = units * lastPrice;
+  return { from: buys[0], count: buys.length, spent, units, avg, value, pl: value / spent - 1, worst, worstTime, series };
+}
+const dcaChart = LightweightCharts.createChart($('dcaChart'), { ...baseOptions(), layout: { ...baseOptions().layout, attributionLogo: false }, rightPriceScale: { borderColor: css('--line'), minimumWidth: 72 } });
+const dcaPrice = dcaChart.addLineSeries({ lineWidth: 2, color: css('--fg'), priceLineVisible: false, lastValueVisible: true });
+const dcaAvgLine = dcaChart.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false, lastValueVisible: true });
+const DCA = { asset: 'mstr', years: 3, key: null };
+function renderDca() {
+  if (!S.mstr || !S.btc) return;
+  const isMstr = DCA.asset === 'mstr', monthly = Number($('dcaAmount').value);
+  if (!(monthly > 0)) return;
+  const last = isMstr ? S.price : S.btcPrice, r = dcaSim(isMstr ? S.mstr.bars : S.btc.bars, monthly, DCA.years, last);
+  if (!r) return;
+  const name = isMstr ? 'MSTR' : '比特币', unit = isMstr ? '股' : '枚';
+  $('dcaAvg').textContent = money(r.avg);
+  const vs = (last / r.avg - 1) * 100;
+  $('dcaSay').textContent = `从 ${r.from} 起每月投 $${monthly.toLocaleString('en-US')}，买入 ${name} 的平均成本是 ${money(r.avg)}。现价 ${money(last)}，比均价${vs >= 0 ? '高' : '低'} ${Math.abs(vs).toFixed(1)}%。`;
+  const row = (a, b, cls = '') => `<div><dt>${a}</dt><dd class="${cls}">${b}</dd></div>`;
+  const usd = n => '$' + Math.round(n).toLocaleString('en-US');
+  $('dcaFacts').innerHTML = row('累计投入', `${usd(r.spent)}（${r.count} 次）`) + row('买到', `${r.units.toFixed(isMstr ? 2 : 5)} ${unit}`) + row('现在价值', usd(r.value))
+    + row('账面盈亏', `${r.pl >= 0 ? '+' : '-'}${usd(Math.abs(r.value - r.spent))}（${pct(r.pl * 100)}）`, dirClass(r.pl))
+    + row('过程中最深亏损', r.worst < 0 ? `${pct(r.worst * 100)}（${r.worstTime}）` : '没有浮亏', r.worst < 0 ? 'down' : '');
+  dcaPrice.setData(r.series.map(p => ({ time: p.time, value: p.price })));
+  dcaAvgLine.setData(r.series.map(p => ({ time: p.time, value: p.avg })));
+  const key = DCA.asset + DCA.years;
+  if (key !== DCA.key) { dcaChart.timeScale().fitContent(); DCA.key = key; }
+}
+const seg = (id, attr, apply) => $(id).addEventListener('click', e => {
+  const v = e.target.dataset[attr]; if (!v) return;
+  apply(v);
+  $(id).querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.target));
+  renderDca();
+});
+seg('dcaAsset', 'asset', v => { DCA.asset = v; });
+seg('dcaYears', 'y', v => { DCA.years = Number(v); });
+$('dcaAmount').value = store.get('dcaAmount', 500);
+$('dcaForm').addEventListener('input', () => { store.set('dcaAmount', $('dcaAmount').value); renderDca(); });
+$('dcaForm').addEventListener('submit', e => e.preventDefault());
+
+// --- mNAV history ---
+const mnavChart = LightweightCharts.createChart($('mnavChart'), { ...baseOptions(), layout: { ...baseOptions().layout, attributionLogo: false }, rightPriceScale: { borderColor: css('--line'), minimumWidth: 72 }, localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: v => v.toFixed(2) } });
+const mnavMain = mnavChart.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false });
+const mnavSecond = mnavChart.addLineSeries({ lineWidth: 2, color: css('--ma-long'), priceLineVisible: false });
+mnavMain.createPriceLine({ price: 1, color: css('--faint'), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '1 倍' });
+const H = { mode: 'official', months: 0, key: null };
+const dateCn = d => d.replaceAll('-', '/');
+function summarize(rows, field) { // rows are newest first, field holds a number on every kept row
+  const vals = rows.filter(r => r[field] != null);
+  if (!vals.length) return null;
+  const hi = vals.reduce((a, b) => b[field] > a[field] ? b : a), lo = vals.reduce((a, b) => b[field] < a[field] ? b : a);
+  const avg = vals.reduce((s, r) => s + r[field], 0) / vals.length, now = vals[0][field];
+  return { now, hi, lo, avg, share: vals.filter(r => r[field] < now).length / vals.length * 100, from: vals.at(-1).date, count: vals.length };
+}
+function renderHistory() {
+  const all = S.history; if (!all) return;
+  const cut = H.months ? (() => { const d = new Date(all[0].date + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - H.months); return d.toISOString().slice(0, 10); })() : '';
+  const rows = all.filter(r => r.date >= cut).map(r => ({ ...r, simple: r.btcNav ? r.marketCap / r.btcNav : null }));
+  const series = f => rows.filter(r => r[f] != null).map(r => ({ time: r.date, value: r[f] })).reverse();
+  const row = (a, b) => `<div><dt>${a}</dt><dd>${b}</dd></div>`, f2 = n => n.toFixed(2) + ' 倍';
+  const stat = (name, s) => row(`${name}最高`, `${f2(s.hi[s.field])}（${dateCn(s.hi.date)}）`) + row(`${name}最低`, `${f2(s.lo[s.field])}（${dateCn(s.lo.date)}）`) + row(`${name}平均`, f2(s.avg));
+  const pick = f => { const s = summarize(rows, f); return s && { ...s, field: f }; };
+  if (H.mode === 'official') {
+    mnavMain.setData(series('mNav')); mnavSecond.setData(series('mNavEntVal'));
+    $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>官网 mNAV（2026 年 6 月起）</span><span><i style="background:var(--ma-long)"></i>企业价值算法（2025 年起）</span>`;
+    const a = pick('mNav'), b = pick('mNavEntVal'), live = toNum(S.kpi?.btc?.mNav);
+    $('mnavNow').textContent = (live > 0 ? live : all.find(r => r.mNav != null).mNav).toFixed(2) + ' 倍';
+    $('mnavSay').textContent = b ? `官网 mNAV 现在的数字。另一条企业价值算法现在是 ${b.now.toFixed(2)} 倍，高于这段时间 ${b.share.toFixed(0)}% 的日子。` : '官网 mNAV 现在的数字。';
+    $('mnavFacts').innerHTML = (a ? stat('官网', a) : '') + (b ? stat('企业价值', b) : '');
+    $('mnavNote').textContent = '两条线都来自 Strategy 官网，但算法不同，不能直接相减。官网 mNAV 从 2026 年 6 月 15 日才有数据，更早的走势要看蓝线。虚线是 1 倍，低于它表示折价。';
+  } else {
+    mnavMain.setData(series('simple')); mnavSecond.setData([]);
+    $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>市值 ÷ 持币价值（我根据官网数据算的）</span>`;
+    const a = pick('simple');
+    $('mnavNow').textContent = a ? f2(a.now) : '--';
+    $('mnavSay').textContent = a ? `这是最简单的算法，只看公司市值和持币价值，高于这段时间 ${a.share.toFixed(0)}% 的日子。` : '';
+    $('mnavFacts').innerHTML = a ? stat('', a) : '';
+    $('mnavNote').textContent = '这条线不是官网 mNAV：它没算债务、优先股和后来增发的影响，所以数字通常和官网 mNAV 不同。它的好处是能看到 2020 年以来的长期变化，只适合看趋势。';
+  }
+  const key = H.mode + H.months;
+  if (key !== H.key) { mnavChart.timeScale().fitContent(); H.key = key; }
+}
+const segHist = (id, attr, apply) => $(id).addEventListener('click', e => {
+  const v = e.target.dataset[attr]; if (v == null) return;
+  apply(v);
+  $(id).querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.target));
+  renderHistory();
+});
+segHist('mnavMode', 'mode', v => { H.mode = v; });
+segHist('mnavRange', 'm', v => { H.months = Number(v); });
+
+// --- Earnings dates and holdings changes ---
+function renderEvents() {
+  const bars = S.mstr?.bars;
+  if (S.earn?.length && bars) {
+    const latest = S.earn[0];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const fiscal = months.indexOf(latest.fiscalQtrEnd.slice(0, 3)), nextName = months[(fiscal + 3) % 12];
+    const last = S.earn.find(e => e.fiscalQtrEnd.startsWith(nextName));
+    const est = last ? `去年同一季度是 ${dateCn(last.date)} 公布，可作粗略参考。` : '';
+    $('earnNext').innerHTML = `<b>下次财报：</b>Nasdaq 还没有提供日期。${est}最近一次是 ${dateCn(latest.date)}。`;
+    const fiscalCn = s => `${s.slice(-4)} 年 ${months.indexOf(s.slice(0, 3)) + 1} 月底`;
+    $('earnTable').innerHTML = '<tr><th>公布日</th><th>季度截至</th><th>下一交易日涨跌</th></tr>' + S.earn.map(e => {
+      const i = bars.findIndex(b => b.time > e.date), chg = i > 0 ? (bars[i].close / bars[i - 1].close - 1) * 100 : null;
+      return `<tr><td>${dateCn(e.date)}</td><td>${fiscalCn(e.fiscalQtrEnd)}</td><td class="${chg == null ? '' : dirClass(chg)}">${chg == null ? '还没有' : pct(chg)}</td></tr>`;
+    }).join('');
+  } else if (S.tried) { $('earnNext').textContent = '暂时取不到财报日期，稍后会自动重试。'; }
+  if (S.history && S.btc) {
+    const asc = [...S.history].reverse(), btcAt = new Map(S.btc.bars.map(b => [b.time, b.close])), changes = [];
+    for (let i = 1; i < asc.length; i++) {
+      const delta = Math.round(asc[i].btcHoldings - asc[i - 1].btcHoldings);
+      if (delta) changes.push({ date: asc[i].date, delta, total: asc[i].btcHoldings });
+    }
+    const year = asc.at(-1).date.slice(0, 4), first = asc.findIndex(r => r.date.startsWith(year));
+    const net = Math.round(asc.at(-1).btcHoldings - asc[Math.max(0, first - 1)].btcHoldings);
+    const sells = changes.filter(c => c.date.startsWith(year) && c.delta < 0).length;
+    $('ledgerNext').innerHTML = `<b>${year} 年以来：</b>持币净${net >= 0 ? '增加' : '减少'} ${Math.abs(net).toLocaleString('en-US')} 枚${sells ? `，其中有 ${sells} 次持币减少` : ''}。`;
+    $('ledgerTable').innerHTML = '<tr><th>日期</th><th>方向</th><th>枚数</th><th>当时币价</th><th>累计持币</th></tr>' + changes.slice(-8).reverse().map(c => {
+      const price = btcAt.get(c.date);
+      return `<tr><td>${dateCn(c.date)}</td><td class="${c.delta > 0 ? 'up' : 'down'}">${c.delta > 0 ? '买入' : '卖出'}</td><td>${Math.abs(c.delta).toLocaleString('en-US')}</td><td>${price ? money(price) : '--'}</td><td>${Math.round(c.total).toLocaleString('en-US')}</td></tr>`;
+    }).join('');
+  } else if (S.tried) { $('ledgerNext').textContent = '暂时取不到官网记录，稍后会自动重试。'; }
+}
+
+// --- Official Strategy figures ---
+const toNum = v => typeof v === 'number' ? v : Number(String(v ?? '').replace(/,/g, ''));
+function renderCompany() {
+  const k = S.kpi?.btc, m = S.kpi?.mstr;
+  if (!k || !(toNum(k.mNav) > 0)) {
+    if (!S.kpi?.tried) return;
+    $('qMnav').textContent = '--'; $('qMnavT').textContent = '暂时取不到官网数据，下一分钟会自动重试。';
+    return;
+  }
+  const v = toNum(k.mNav), ext = k.extendedSession;
+  $('qMnav').textContent = v.toFixed(2) + ' 倍';
+  $('qMnavT').textContent = v >= 1
+    ? `官网的 mNAV 是 ${v.toFixed(2)} 倍，也就是相对所持比特币价值有约 ${((v - 1) * 100).toFixed(0)}% 的溢价。`
+    : `官网的 mNAV 是 ${v.toFixed(2)} 倍，也就是相对所持比特币价值有约 ${((1 - v) * 100).toFixed(0)}% 的折价。`;
+  $('qMnavS').textContent = '大于 1 叫溢价，小于 1 叫折价。' + (ext?.mNav ? `${ext.sessionType === 'Pre-Market' ? '盘前' : '盘后'}约 ${toNum(ext.mNav).toFixed(2)} 倍。` : '');
+  const held = toNum(k.btcHoldings), bn = millions => (millions / 100).toFixed(0) + ' 亿美元';
+  const rows = [
+    ['持有比特币', held.toLocaleString('en-US') + ' 枚'],
+    ['占比特币总量', toNum(k.pctOfBtcTotalSupply).toFixed(2) + '%'],
+    ['每股含币量', (toNum(k.satsPerShare) / 1e8).toFixed(5) + ' 枚（约 ' + money(toNum(k.btcPerShareUsd)) + '）'],
+    ['扣除债务后的每股含币量', (toNum(k.netSatsPerShare) / 1e8).toFixed(5) + ' 枚（约 ' + money(toNum(k.netBtcPerShareUsd)) + '）'],
+  ];
+  if (m) rows.push(['公司市值', bn(toNum(m.marketCap))], ['债务和优先股', bn(toNum(m.debt) + toNum(m.pref))]);
+  $('facts').innerHTML = rows.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
+}
+
+// --- Technical review: an inventory of states, never a call ---
+function renderReview({ price, ma50, ma200, r, rw, ratio }) {
+  const bars = S.mstr.bars, closes = bars.map(b => b.close), m = macd(closes), bull = [], bear = [], flat = [];
+  const add = (list, title, text) => list.push({ title, text });
+  (price >= ma200 ? bull : bear).push({ title: price >= ma200 ? '价格在 200 日线上方' : '价格在 200 日线下方', text: `200 日线 ${money(ma200)}，反映长期趋势位置。` });
+  (price >= ma50 ? bull : bear).push({ title: price >= ma50 ? '价格在 50 日线上方' : '价格在 50 日线下方', text: `50 日线 ${money(ma50)}，反映中期趋势位置。` });
+  const maCross = crossings(sma(closes, 50), sma(closes, 200), bars), lastMa = maCross.at(-1);
+  if (lastMa) add(lastMa.type === 'gold' ? bull : bear, lastMa.type === 'gold' ? '50 日线在 200 日线上方（金叉状态）' : '50 日线在 200 日线下方（死叉状态）', `最近一次交叉在 ${lastMa.time}。`);
+  const line = m.line.at(-1), sig = m.signal.at(-1), macdCross = crossings(m.line, m.signal, bars).at(-1);
+  add(line >= sig ? bull : bear, line >= sig ? 'MACD 在信号线上方' : 'MACD 在信号线下方', `最近一次 MACD ${macdCross?.type === 'gold' ? '金叉' : '死叉'}在 ${macdCross?.time}。${line >= 0 ? '零轴上方。' : '零轴下方。'}`);
+  const week = toWeekly(bars), wm = macd(week.map(b => b.close));
+  add(wm.line.at(-1) >= wm.signal.at(-1) ? bull : bear, wm.line.at(-1) >= wm.signal.at(-1) ? '周线 MACD 在信号线上方' : '周线 MACD 在信号线下方', '周线变化更慢，本周未走完，还可能变化。');
+  const rsiState = (name, x) => x >= 70 ? add(flat, `${name} RSI ${x.toFixed(1)}：高于 70`, '上涨动能偏强，也常被视为偏热，方向不明确。')
+    : x <= 30 ? add(flat, `${name} RSI ${x.toFixed(1)}：低于 30`, '下跌动能偏强，也常被视为偏冷，方向不明确。')
+    : add(x >= 50 ? bull : bear, `${name} RSI ${x.toFixed(1)}：${x >= 50 ? '高于' : '低于'} 50`, `没有走极端，但${x >= 50 ? '上涨' : '下跌'}力度占优。`);
+  rsiState('日线', r); rsiState('周线', rw);
+  const last = bars.at(-1), isUp = last.close >= last.open;
+  if (ratio >= 1.5) add(isUp ? bull : bear, `放量${isUp ? '上涨' : '下跌'}（${ratio.toFixed(2)} 倍）`, `${last.time} 的 K 线${isUp ? '收阳' : '收阴'}，成交量明显高于此前 20 日平均。`);
+  else add(flat, `成交量 ${ratio.toFixed(2)} 倍`, '没有明显放大。');
+  const ul = $('signals'); ul.replaceChildren();
+  for (const [cls, list] of [['bull', bull], ['bear', bear], ['flat', flat]]) for (const it of list) {
+    const li = document.createElement('li'), b = document.createElement('b');
+    li.className = cls; b.textContent = it.title; li.append(b, it.text); ul.append(li);
+  }
+  $('tally').innerHTML = `<span class="up">偏多 ${bull.length}</span> · <span class="down">偏空 ${bear.length}</span> · 中性 ${flat.length}`;
+
+  const year = bars.slice(-252);
+  const rows = [
+    { name: '一年最高', price: Math.max(...year.map(b => b.high)) }, { name: '一年最低', price: Math.min(...year.map(b => b.low)) }, { name: '50 日线', price: ma50 }, { name: '200 日线', price: ma200 },
+  ];
+  const cost = Number($('cost').value); if (cost > 0) rows.push({ name: '我的成本', price: cost });
+  rows.push({ name: '现价', price, here: true });
+  rows.sort((a, b) => b.price - a.price);
+  $('ladder').innerHTML = rows.map(x => `<li class="${x.here ? 'here' : ''}"><span>${x.name}</span><span>${money(x.price)} ${x.here ? '' : `<small>${pct((x.price / price - 1) * 100)}</small>`}</span></li>`).join('');
+
+  const fwd = (i, n) => i + n < closes.length ? pct((closes[i + n] / closes[i] - 1) * 100) : '未满';
+  const head = '<tr><th>日期</th><th>类型</th><th>当天收盘</th><th>之后 20 日</th><th>之后 60 日</th><th>至今</th></tr>';
+  $('crossTable').innerHTML = head + maCross.slice().reverse().map(x => `<tr><td>${x.time}</td><td class="${x.type === 'gold' ? 'up' : 'down'}">${x.type === 'gold' ? '金叉' : '死叉'}</td><td>${money(closes[x.i])}</td><td>${fwd(x.i, 20)}</td><td>${fwd(x.i, 60)}</td><td>${pct((price / closes[x.i] - 1) * 100)}</td></tr>`).join('');
+  $('crossNote').textContent = `过去 5 年共 ${maCross.length} 次。样本很少，而且 MSTR 这几年波动极大，过去的表现不能说明以后会怎样。`;
+  checkCrossAlerts(bars, m);
+}
+
+// --- New-cross alerts: only bars that have finished, and never on first sight ---
+$('crossAlerts').checked = store.get('crossAlerts', true);
+$('crossAlerts').addEventListener('change', () => store.set('crossAlerts', $('crossAlerts').checked));
+function checkCrossAlerts(bars, m) {
+  const done = S.session.key === 'regular' ? bars.length - 1 : bars.length, seen = store.get('seenCross', {});
+  const closes = bars.slice(0, done).map(b => b.close), part = bars.slice(0, done);
+  const latest = {
+    '50/200 日线': crossings(sma(closes, 50), sma(closes, 200), part).at(-1),
+    'MACD': crossings(m.line.slice(0, done), m.signal.slice(0, done), part).at(-1),
+  };
+  const fresh = [];
+  for (const [name, c] of Object.entries(latest)) {
+    if (!c) continue;
+    const id = c.type + c.time;
+    if (seen[name] && seen[name] !== id) fresh.push(`${name} ${c.type === 'gold' ? '金叉' : '死叉'}（${c.time}）`);
+    seen[name] = id;
+  }
+  store.set('seenCross', seen);
+  if (!fresh.length || !$('crossAlerts').checked) return;
+  const message = 'MSTR 出现新交叉：' + fresh.join('、');
+  $('bannerText').textContent = '提醒：' + message; $('banner').hidden = false;
+  chime();
+  fetch('/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) }).catch(() => {});
+}
+
+// --- Position and mNAV ---
+let costLine = null, alertLines = [];
+function renderPosition() {
+  const cost = Number($('cost').value), qty = Number($('qty').value);
+  if (costLine) { candles.removePriceLine(costLine); costLine = null; }
+  if (!(cost > 0)) { $('plV').textContent = '--'; $('plV').className = 'v'; $('plT').textContent = '填入成本价后，图上会出现一条白色虚线。'; return; }
+  costLine = candles.createPriceLine({ price: cost, color: css('--cost'), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '成本' });
+  if (!S.price) return;
+  const pl = (S.price / cost - 1) * 100;
+  $('plV').textContent = pct(pl); $('plV').className = 'v ' + dirClass(pl);
+  $('plT').textContent = qty > 0 ? `按 ${money(S.price)} 计算，账面盈亏 ${S.price >= cost ? '+' : '-'}${money(Math.abs(S.price - cost) * qty)}。` : `按常规时段价格 ${money(S.price)} 计算。填入股数可以看到金额。`;
+}
+for (const id of ['cost', 'qty']) $(id).value = store.get(id, '');
+const saveInputs = ids => ids.forEach(id => store.set(id, $(id).value));
+$('posForm').addEventListener('input', () => { saveInputs(['cost', 'qty']); if (S.mstr) renderReadout(); else renderPosition(); });
+$('posForm').addEventListener('submit', e => e.preventDefault());
+
+// --- Sound ---
+let audio = null;
+function enableAudio() {
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch {}
+  renderSoundHint();
+}
+function chime() {
+  if (!$('soundOn').checked) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume?.();
+    [[659.25, 0], [880, .16], [1318.5, .32]].forEach(([freq, at]) => {
+      const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + at;
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.22, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + .7);
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + .75);
+    });
+  } catch {}
+}
+function renderSoundHint() {
+  const ready = audio && audio.state === 'running';
+  $('soundHint').textContent = !$('soundOn').checked ? '提示音已关闭。' : ready ? '提示音已就绪。' : '浏览器要求先点一下页面，提示音才能响。打开页面后请先点一下。';
+}
+addEventListener('pointerdown', enableAudio, { passive: true });
+addEventListener('keydown', enableAudio);
+$('soundOn').checked = store.get('soundOn', true);
+$('soundOn').addEventListener('change', () => { store.set('soundOn', $('soundOn').checked); renderSoundHint(); });
+$('soundTest').addEventListener('click', () => { enableAudio(); chime(); });
+renderSoundHint();
+
+// --- Alerts ---
+let alerts = store.get('alerts', []);
+const dirText = { above: '涨到或高于', below: '跌到或低于' };
+$('extAlerts').checked = store.get('extAlerts', false);
+$('extAlerts').addEventListener('change', () => { store.set('extAlerts', $('extAlerts').checked); checkAlerts(); });
+function renderAlerts() {
+  alertLines.forEach(l => candles.removePriceLine(l));
+  alertLines = alerts.map(al => candles.createPriceLine({ price: al.price, color: css('--warn'), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: '提醒' }));
+  const ul = $('alerts'); ul.replaceChildren();
+  alerts.forEach((al, i) => {
+    const li = document.createElement('li'), span = document.createElement('span'), del = document.createElement('button');
+    span.textContent = `${dirText[al.dir]} ${money(al.price)}`;
+    del.textContent = '移除'; del.type = 'button';
+    del.onclick = () => { alerts.splice(i, 1); store.set('alerts', alerts); renderAlerts(); };
+    li.append(span, del); ul.append(li);
+  });
+  if (!alerts.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = '还没有提醒，图上也会画出提醒价位。'; ul.append(li); }
+}
+function alertQuote() {
+  if ($('extAlerts').checked && S.ext && (S.session.key === 'pre' || S.session.key === 'post')) return { price: S.ext.price, label: S.ext.label + '价' };
+  return { price: S.price, label: '现价' };
+}
+function checkAlerts() {
+  if (!S.price || !S.session) return;
+  const q = alertQuote();
+  const hit = alerts.filter(al => al.dir === 'above' ? q.price >= al.price : q.price <= al.price);
+  if (!hit.length) return;
+  const message = hit.map(al => `MSTR ${dirText[al.dir]} ${money(al.price)}，${q.label} ${money(q.price)}`).join('；');
+  $('bannerText').textContent = '提醒：' + message; $('banner').hidden = false;
+  chime();
+  fetch('/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) }).catch(() => {});
+  alerts = alerts.filter(al => !hit.includes(al));
+  store.set('alerts', alerts); renderAlerts();
+}
+$('bannerClose').addEventListener('click', () => { $('banner').hidden = true; });
+$('alertForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const price = Number($('alertPrice').value);
+  if (!(price > 0)) return;
+  alerts.push({ dir: $('alertDir').value, price });
+  store.set('alerts', alerts); $('alertPrice').value = ''; renderAlerts(); checkAlerts();
+});
+renderAlerts();
+
+// --- Term explanations ---
+const TERMS = {
+  range: '只看这一年价格的相对位置，就像考试排名。分数低可能是机会，也可能是公司或比特币确实变差了，所以它不能说明便宜还是贵。',
+  ma: '平均价就是过去一段时间每天收盘价的平均数。现价高于平均价，说明比这段时间的平均水平强；低于就是弱。50 天看几个月，200 天看一年左右。图上那两条线就是它们，专业叫法是“均线”。',
+  vola: '这是把最近每天涨跌的幅度取平均。数字越大，账面上下越剧烈。MSTR 的波动通常比普通股票和比特币都大，持有前要想清楚自己能不能接受。',
+  fear: '恐慌指标衡量的是大家的情绪。比特币情绪指数看币圈，0 最恐惧，100 最贪婪，数字由 Strategy 官网提供。VIX 看美股未来一个月的预期波动，大跌时往往飙升。恐慌时不一定是底部，恐慌可能持续很久甚至加深，所以它只能说明气氛，不能预测涨跌。',
+  cost: '200 周平均价是比特币过去约 4 年的平均价，常被当作长期趋势线。全网平均持币成本（realized price）是所有比特币最后一次转移时价格的平均值，可以粗略理解为大家的平均成本。价格曾跌破过这两条线，它们不是不会被跌破的底部。',
+  dca: '定投就是不管涨跌，每月投固定金额。价格低时买到的多，价格高时买到的少。定投均价是总投入除以买到的数量，也就是你平均花多少钱买到一股或一枚。这里只是用历史价格算账。定投能摊平买入价格，但不能保证赚钱，标的长期下跌时一样会亏。',
+  rsi: '衡量最近 14 根 K 线上涨和下跌的相对力度，范围 0 到 100。日线看 14 天，周线看 14 周。常用 70 和 30 作为参考线，强势股可能长期停在高位，不能单独用来判断买卖。',
+  cross: '短期均线上穿长期均线叫金叉，下穿叫死叉。均线是过去价格的平均，所以交叉总是滞后的，价格来回震荡时还会反复出现。',
+  vol: '成交量是一天内成交的股数。放大说明这天比平时更活跃，常常伴随重要消息，但不能说明方向。',
+  corr: '相关系数衡量两者日涨跌的同步程度，1 表示完全同向，0 表示没有明显关系，-1 表示完全反向。过去的联动不保证以后也一样。',
+  mnav: 'MSTR 这家公司的主要资产是比特币。mNAV 把公司的价值和它所持比特币的价值相比。比如 1.10 倍，大致表示这份比特币被市场多算了 10%。大于 1 叫溢价，小于 1 叫折价。这里的数字直接取自 Strategy 官网，官网有两种算法，我没有查到官网对主指标的完整公式。',
+};
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.q'); if (!btn) return;
+  const box = btn.closest('.item, .card'), open = box.querySelector('.explain');
+  if (open) return open.remove();
+  const p = document.createElement('p'); p.className = 'explain'; p.textContent = TERMS[btn.dataset.term];
+  btn.closest('.head').after(p);
+});
+
+// --- Refresh loop ---
+async function refresh() {
+  try {
+    const [m, b, i] = await Promise.all([getJson('/api/chart?symbol=MSTR'), getJson('/api/chart?symbol=BTC-USD'), getJson('/api/intraday')]);
+    const firstLoad = !S.mstr;
+    S.mstr = parseDaily(m); S.btc = parseDaily(b); S.intraday = parseIntraday(i);
+    S.price = S.mstr.meta.regularMarketPrice; S.btcPrice = S.btc.meta.regularMarketPrice;
+    S.session = sessionOf(Date.now() / 1000, S.intraday.periods);
+    S.ext = extendedQuote(S.session, S.intraday.periods, S.intraday.points, S.price);
+    S.fail = false; S.loadedAt = Date.now();
+    if (firstLoad) S.rangeUnset = true;
+    // 官网数据和行情分开取：官网取不到时，其他功能照常
+    const [km, kb, vx, hs, er] = await Promise.allSettled([getJson('/api/strategy/mstr'), getJson('/api/strategy/btc'), getJson('/api/chart?symbol=' + encodeURIComponent('^VIX')), getJson('/api/strategy/history'), getJson('/api/earnings')]);
+    S.tried = true;
+    if (hs.status === 'fulfilled') S.history = hs.value;
+    if (er.status === 'fulfilled') S.earn = er.value.map(e => { const [mo, d, y] = e.dateReported.split('/'); return { ...e, date: `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}` }; });
+    if (vx.status === 'fulfilled') S.vix = parseDaily(vx.value);
+    S.kpi = { tried: true, mstr: km.status === 'fulfilled' ? km.value[0] : S.kpi?.mstr, btc: kb.status === 'fulfilled' ? kb.value.results : S.kpi?.btc };
+    renderBand(); renderHeader(); draw(false); renderReadout(); renderStatus(); checkAlerts();
+  } catch (err) {
+    S.fail = true; renderStatus();
+    if (!S.mstr) { $('sentence').textContent = '暂时取不到行情。请检查网络，页面每分钟会自动重试。'; $('chip').className = 'bad'; $('chip').textContent = '连接中断'; }
+  }
+}
+$('refresh').addEventListener('click', refresh);
+const guideSeen = store.get('guideClosed', false);
+$('guide').open = !guideSeen;
+$('guide').addEventListener('toggle', () => store.set('guideClosed', !$('guide').open));
+refresh();
+setInterval(refresh, 60000);
+setInterval(() => { renderBand(); renderStatus(); }, 5000);
+</script>
+</body>
+</html>
