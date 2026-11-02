@@ -161,6 +161,15 @@ h2 { font: 700 15px/1.3 var(--song); letter-spacing: .04em; margin: 0; }
 .row-btn { padding: 1px 7px; font-size: 12px; margin: 0 4px 3px 0; }
 #tmpl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
 
+/* Top navigation */
+#topNav { position: sticky; top: 0; z-index: 20; display: flex; gap: 4px; overflow-x: auto; padding: 8px max(16px, 2.4vw); background: var(--panel); border-bottom: 1px solid var(--line); }
+#topNav button { flex: none; border-color: transparent; }
+#topNav button.on { color: var(--fg); background: var(--panel-2); border-color: transparent; }
+.fold > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; font: 700 15px/1.3 var(--song); }
+.fold[open] > summary { margin-bottom: 12px; }
+.fold > summary span { font: 500 13px var(--sans); color: var(--muted); }
+.fold .review-body { display: grid; gap: 14px; }
+
 /* Technical review */
 .review { display: grid; gap: 14px; }
 .review-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
@@ -197,6 +206,7 @@ footer { font-size: 12px; color: var(--faint); }
 </style>
 </head>
 <body>
+<nav id="topNav" aria-label="页面导航"></nav>
 <div class="wrap">
   <header class="hero">
     <div class="who"><b>MSTR</b><span>Strategy Inc · 纳斯达克</span></div>
@@ -267,7 +277,7 @@ footer { font-size: 12px; color: var(--faint); }
       <div class="chips" id="chips">
         <label><input id="showCross" type="checkbox" checked> 金叉死叉</label>
         <label><input id="showEarn" type="checkbox" checked> 财报日</label>
-        <div class="seg sp" id="subs"><button data-sub="macd" class="on" type="button">MACD</button><button data-sub="rsi" type="button">RSI</button></div>
+        <div class="seg sp" id="subs"><button data-sub="off" class="on" type="button">不看副图</button><button data-sub="macd" type="button">MACD</button><button data-sub="rsi" type="button">RSI</button></div>
       </div>
       <div id="ohlc"></div>
       <div class="stage">
@@ -364,10 +374,8 @@ footer { font-size: 12px; color: var(--faint); }
   </section>
 
   <section class="panel review card">
-    <div class="review-head">
-      <div class="head"><h2 style="color:var(--fg)">各项技术信号</h2></div>
-      <span id="tally"></span>
-    </div>
+    <details class="fold" id="reviewBox"><summary>各项技术信号 <span id="tally"></span></summary>
+    <div class="review-body">
     <p class="caution">这里只清点各项指标当前的状态，不判断买入或卖出时机，也不预测涨跌。信号的多少不代表胜率，请结合自己的资金情况独立决定，或咨询持牌顾问。</p>
     <ul class="signals" id="signals"></ul>
     <div class="card">
@@ -375,6 +383,7 @@ footer { font-size: 12px; color: var(--faint); }
       <div class="table-wrap"><table id="crossTable"></table></div>
       <p class="hint" id="crossNote"></p>
     </div>
+    </div></details>
   </section>
 
   <div class="bottom">
@@ -464,9 +473,10 @@ footer { font-size: 12px; color: var(--faint); }
   </section>
 
   <section class="panel card">
-    <h2>数据来源状态</h2>
+    <details class="fold" id="sourceBox"><summary>数据来源状态 <span id="sourceBrief"></span></summary>
     <div class="table-wrap"><table id="sourceTable"></table></div>
     <p class="hint">“数据日期”是这份数据本身的日期，不是刷新时间。取不到时，页面继续显示上一次的数据，不会用 0 代替。周末和节假日，股票数据停在最近的交易日是正常的。</p>
+    </details>
   </section>
 
   <footer>行情来自 Yahoo Finance，mNAV、持币数和历史记录来自 Strategy 官网，财报日期来自 Nasdaq，都可能有延迟，下单前请以券商行情为准。本页只描述数据状态，不判断买卖时机，也不预测涨跌。时间均为北京时间。</footer>
@@ -553,7 +563,7 @@ new ResizeObserver(() => {
   requestAnimationFrame(() => { const r = chart.timeScale().getVisibleLogicalRange(); if (r) sub.timeScale().setVisibleLogicalRange(r); });
 }).observe($('sub'));
 
-const S = { health: {}, sub: 'macd', view: 'day', months: 6, mstr: null, btc: null, intraday: null, session: null, ext: null, price: null, btcPrice: null, drawnKey: null, prevPrice: null, fail: false, loadedAt: 0 };
+const S = { health: {}, sub: 'off', view: 'day', months: 6, mstr: null, btc: null, intraday: null, session: null, ext: null, price: null, btcPrice: null, drawnKey: null, prevPrice: null, fail: false, loadedAt: 0 };
 const VIEWS = { day: { short: 50, long: 200, name: '日' }, week: { short: 10, long: 40, name: '周' } };
 
 function bounds() {
@@ -577,7 +587,7 @@ function draw(force) {
   const compare = S.view === 'compare';
   // 隐藏的图表保留尺寸，切换时才能正常绘制
   $('chart').classList.toggle('off', compare); $('compare').classList.toggle('off', !compare);
-  $('ohlc').hidden = compare; $('cmpNote').hidden = !compare; $('chips').hidden = compare; $('sub').hidden = compare; $('subNote').hidden = compare;
+  $('ohlc').hidden = compare; $('cmpNote').hidden = !compare; $('chips').hidden = compare; $('sub').hidden = compare || S.sub === 'off'; $('subNote').hidden = compare || S.sub === 'off';
   if (compare) return drawCompare();
   const bars = currentBars(), last = bars.at(-1), key = [S.view, bars.length, last.close, last.volume].join();
   if (key !== S.drawnKey) {
@@ -606,7 +616,8 @@ function drawSub(bars) {
   applySub();
 }
 function applySub() {
-  const isMacd = S.sub === 'macd';
+  const isMacd = S.sub === 'macd', off = S.sub === 'off';
+  $('sub').hidden = off || S.view === 'compare'; $('subNote').hidden = off || S.view === 'compare';
   $('subNote').textContent = isMacd
     ? 'MACD 看短期和中期动能的差距：白线在橙线上方，说明短期动能强于中期；红绿柱是两者的差。它是滞后的，也会反复交叉。'
     : 'RSI 看近期涨跌力量，0 到 100，虚线是常用参考线 70 和 30。周 K 下显示的是周线 RSI。';
@@ -1271,12 +1282,40 @@ function dayAge(key) {
   return t ? (Date.now() - t) / 864e5 : null;
 }
 function renderSources() {
+  const bad = SOURCES.filter(([key]) => S.health[key] === false).length;
+  $('sourceBrief').textContent = bad ? `${bad} 项取不到，点开查看` : SOURCES.every(([key]) => S.health[key] != null) ? '全部正常' : '读取中';
+  $('sourceBrief').style.color = bad ? 'var(--warn)' : '';
   $('sourceTable').innerHTML = '<tr><th>来源</th><th>内容</th><th>数据日期</th><th>状态</th></tr>' + SOURCES.map(([key, name, what, date, limit]) => {
     const state = S.health[key], age = dayAge(key), old = limit && age != null && age > limit;
     const [word, cls] = state === false ? [date() ? '取不到，显示上次数据' : '取不到', 'down'] : state == null ? ['读取中', ''] : old ? ['可能过期', 'down'] : ['正常', ''];
     return `<tr><td>${name}</td><td>${what}</td><td>${date() || '--'}</td><td class="${cls}">${word}</td></tr>`;
   }).join('');
 }
+
+// --- Top navigation ---
+const NAV = [['总览', '.qs'], ['K 线', '.main'], ['mNAV', '#mnavChart'], ['财报和买卖', '#earnTable'], ['定投', '#dcaChart'], ['固定规则', '#exitSection'], ['技术信号', '#reviewBox'], ['提醒和持仓', '.bottom'], ['交易计划', '#planWhy'], ['数据来源', '#sourceBox']];
+function buildNav() {
+  const spots = NAV.map(([name, sel]) => {
+    const el = document.querySelector(sel), box = el && (el.closest('.qs, .main, .bottom, .two, section') || el);
+    return box && box.offsetParent !== null ? { name, box } : null;
+  }).filter(Boolean).sort((a, b) => a.box.compareDocumentPosition(b.box) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+  $('topNav').replaceChildren(...spots.map(s => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = s.name;
+    b.onclick = () => {
+      s.box.querySelector('details.fold')?.setAttribute('open', '');
+      window.scrollTo({ top: s === spots[0] ? 0 : s.box.getBoundingClientRect().top + scrollY - $('topNav').offsetHeight - 8, behavior: 'auto' });
+      mark();
+    };
+    s.button = b; return b;
+  }));
+  const mark = () => {
+    const line = $('topNav').offsetHeight + 40; let cur = spots[0];
+    for (const s of spots) if (s.box.getBoundingClientRect().top <= line) cur = s;
+    spots.forEach(s => s.button.classList.toggle('on', s === cur));
+  };
+  addEventListener('scroll', mark, { passive: true }); mark();
+}
+addEventListener('load', buildNav);
 
 // --- Refresh loop ---
 async function refresh() {
