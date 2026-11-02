@@ -20,6 +20,7 @@ IDLE_EXIT_SECONDS = 12 * 3600  # 浏览器会暂停后台标签页，所以要�
 STATIC = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/lightweight-charts.js": ("lightweight-charts.js", "text/javascript; charset=utf-8"),
+    "/calc.js": ("calc.js", "text/javascript; charset=utf-8"),
 }
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
@@ -139,6 +140,10 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path in STATIC:
             name, content_type = STATIC[parsed.path]
             return self.send_body(200, (ROOT / name).read_bytes(), content_type)
+        if parsed.path == "/extras.js":
+            # 可选的本地扩展：local 文件夹不上传，没有时返回空内容
+            body = "\n".join(p.read_text(encoding="utf-8") for p in sorted(ROOT.glob("local/extra-*.js")))
+            return self.send_body(200, body.encode(), "text/javascript; charset=utf-8")
         if parsed.path == "/api/chart":
             symbol = parse_qs(parsed.query).get("symbol", [""])[0]
             if symbol not in SYMBOLS:

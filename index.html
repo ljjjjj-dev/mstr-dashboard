@@ -30,7 +30,7 @@
 .off { visibility: hidden; position: absolute; inset: 0; }
 body { margin: 0; color: var(--fg); font: 14px/1.6 var(--sans); background: var(--ink);
   background-image: radial-gradient(900px 420px at 88% -120px, var(--glow), transparent 70%); background-attachment: fixed; }
-.wrap { max-width: 1320px; margin: 0 auto; padding-block: 24px 40px; padding-inline: max(16px, 2.4vw); display: grid; gap: 16px; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 24px 40px; padding-inline: max(16px, 2.4vw); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 button { font: inherit; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
 button:hover { color: var(--fg); border-color: var(--faint); }
 button.on { color: var(--ink); background: var(--fg); border-color: var(--fg); font-weight: 600; }
@@ -144,6 +144,23 @@ h2 { font: 700 15px/1.3 var(--song); letter-spacing: .04em; margin: 0; }
 .chips .sp { margin-left: auto; }
 #sub { height: 150px; border-top: 1px solid var(--line); margin-top: 4px; }
 
+/* Trading plan */
+#planWhy { width: 100%; min-height: 64px; resize: vertical; font: inherit; color: var(--fg); background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; }
+.plan-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+@media (max-width: 1040px) { .plan-grid { grid-template-columns: minmax(0, 1fr); } }
+.plan-main { display: grid; gap: 12px; min-width: 0; }
+#ruleNote { flex: 1 1 200px; }
+.check-list li { display: grid; gap: 1px; font: 12.5px/1.5 var(--sans); color: var(--muted); padding: 6px 0 0; }
+.check-list li b { font-weight: 600; color: var(--fg); }
+.check-list li.miss b { color: var(--warn); }
+.rule-row td { white-space: normal; vertical-align: top; text-align: left; font: 13px/1.5 var(--sans); }
+.rule-row.fired td:first-child { color: var(--warn); font-weight: 600; }
+#ruleTable th, #tradeTable th { text-align: left; }
+.back { padding: 8px 12px; font-size: 12.5px; color: var(--muted); background: var(--panel-2); border-radius: 6px; white-space: normal; }
+.back b { color: var(--fg); }
+.row-btn { padding: 1px 7px; font-size: 12px; margin: 0 4px 3px 0; }
+#tmpl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+
 /* Technical review */
 .review { display: grid; gap: 14px; }
 .review-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
@@ -173,7 +190,8 @@ li { display: flex; justify-content: space-between; align-items: center; gap: 8p
 .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 #banner { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; color: var(--ink); background: var(--warn); font-weight: 600; }
-#banner button { color: var(--ink); border-color: var(--ink); }
+#banner button { flex: none; color: var(--ink); border-color: var(--ink); }
+#bannerText { min-width: 0; overflow-wrap: anywhere; }
 #banner[hidden] { display: none; }
 footer { font-size: 12px; color: var(--faint); }
 </style>
@@ -222,7 +240,7 @@ footer { font-size: 12px; color: var(--faint); }
       <div class="v" id="qVola">--</div><p class="say" id="qVolaT"></p><p class="small" id="qVolaS"></p>
     </section>
     <section class="panel card q-card">
-      <div class="q-top head"><span class="ask" style="color:var(--fg)">比特币现在怎么样？</span><button class="q" data-term="fear" type="button" aria-label="解释恐惧贪婪指数">?</button></div>
+      <div class="q-top head"><span class="ask" style="color:var(--fg)">比特币现在怎么样？</span><button class="q" data-term="corr" type="button" aria-label="解释变动倍数">?</button></div>
       <div class="v" id="qBtc">--</div><p class="say" id="qBtcT"></p><p class="small" id="qBtcS"></p>
     </section>
     <section class="panel card q-card">
@@ -397,10 +415,65 @@ footer { font-size: 12px; color: var(--faint); }
     </section>
   </div>
 
+  <section class="panel card">
+    <div class="head"><h2 style="color:var(--fg)">我的交易计划</h2></div>
+    <p class="caution">规则和数字都由你自己决定。工具只负责提醒，不会替你判断，也不会下单。这里的内容只保存在这台电脑的这个浏览器里，清除浏览器数据就会丢失。</p>
+    <div class="plan-grid">
+      <div class="plan-main">
+        <div class="card" style="gap:6px"><label for="planWhy" class="head">我当初为什么买？这个理由消失时我怎么办？</label><textarea id="planWhy" placeholder="用自己的话写下来，提醒触发时会给你看。"></textarea></div>
+        <div class="form"><label for="planReview">下次复盘日期</label><input id="planReview" type="date"></div>
+        <div class="head">我的规则</div>
+        <div id="tmpl">从例子开始：<button type="button" class="row-btn" data-t="priceBelow" data-n="例如：先重新看一遍买入理由，再决定是否减仓">跌到某个价</button><button type="button" class="row-btn" data-t="priceAbove" data-n="例如：考虑卖出一部分，并记录下来">涨到某个价</button><button type="button" class="row-btn" data-t="drawdown" data-n="例如：停下来检查仓位是否超出能承受的范围">从高点回撤</button><button type="button" class="row-btn" data-t="belowMa200" data-n="例如：复盘趋势，暂不追加">连续低于 200 日线</button></div>
+        <form class="form" id="ruleForm">
+          <label for="ruleType">当</label>
+          <select id="ruleType">
+            <option value="priceBelow">价格跌到或低于（美元）</option>
+            <option value="priceAbove">价格涨到或高于（美元）</option>
+            <option value="drawdown">从设定后的高点回撤达到（%）</option>
+            <option value="belowMa200">连续低于 200 日线（交易日）</option>
+            <option value="mnavBelow">官网 mNAV 低于或等于（倍）</option>
+            <option value="mnavAbove">官网 mNAV 高于或等于（倍）</option>
+            <option value="date">到了这个日期</option>
+          </select>
+          <input id="ruleValue" type="number" min="0" step="any" required aria-label="规则数值">
+          <input id="ruleNote" type="text" maxlength="200" placeholder="我打算怎么做（自己写）" aria-label="我打算怎么做">
+          <button type="submit">添加规则</button>
+        </form>
+        <div class="table-wrap"><table id="ruleTable"></table></div>
+        <div class="head">实际操作记录</div>
+        <form class="form" id="tradeForm">
+          <input id="tradeDate" type="date" required aria-label="日期">
+          <select id="tradeSide" aria-label="方向"><option value="卖出">卖出</option><option value="买入">买入</option></select>
+          <input id="tradeShares" type="number" min="0" step="any" placeholder="股数" required aria-label="股数">
+          <input id="tradePrice" type="number" min="0" step="0.01" placeholder="成交价" required aria-label="成交价">
+          <input id="tradeNote" type="text" maxlength="120" placeholder="当时为什么这样做" aria-label="原因" style="flex:1 1 160px">
+          <button type="submit">记录</button>
+        </form>
+        <div class="table-wrap"><table id="tradeTable"></table></div>
+        <p class="hint">这只是记录，不会下单。真正买卖请在券商完成。</p>
+      </div>
+      <div class="plan-side card">
+        <div class="head"><h3 style="margin:0;font:700 13.5px var(--song);color:var(--fg)">计划体检</h3></div>
+        <ul class="check-list" id="planCheck"></ul>
+        <p class="hint">只检查写全了没有，不代表规则好不好。</p>
+        <div class="head"><h3 style="margin:0;font:700 13.5px var(--song);color:var(--fg)">最坏情况先算一算</h3></div>
+        <dl class="facts" id="planStress"></dl>
+        <p class="hint" id="planStressNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel card">
+    <h2>数据来源状态</h2>
+    <div class="table-wrap"><table id="sourceTable"></table></div>
+    <p class="hint">“数据日期”是这份数据本身的日期，不是刷新时间。取不到时，页面继续显示上一次的数据，不会用 0 代替。周末和节假日，股票数据停在最近的交易日是正常的。</p>
+  </section>
+
   <footer>行情来自 Yahoo Finance，mNAV、持币数和历史记录来自 Strategy 官网，财报日期来自 Nasdaq，都可能有延迟，下单前请以券商行情为准。本页只描述数据状态，不判断买卖时机，也不预测涨跌。时间均为北京时间。</footer>
 </div>
 
 <script src="/lightweight-charts.js"></script>
+<script src="/calc.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const store = {
@@ -415,83 +488,6 @@ const bj = (t, opts) => new Date(t * 1000).toLocaleString('zh-CN', { timeZone: '
 const hm = t => bj(t, { hour: '2-digit', minute: '2-digit' });
 
 // --- Pure calculations ---
-function sma(values, n) {
-  const out = []; let sum = 0;
-  values.forEach((v, i) => { sum += v; if (i >= n) sum -= values[i - n]; out.push(i >= n - 1 ? sum / n : null); });
-  return out;
-}
-function rsiSeries(closes, n = 14) { // Wilder smoothing
-  const out = closes.map(() => null);
-  if (closes.length <= n) return out;
-  let gain = 0, loss = 0;
-  for (let i = 1; i <= n; i++) { const d = closes[i] - closes[i - 1]; if (d > 0) gain += d; else loss -= d; }
-  gain /= n; loss /= n;
-  const value = () => loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
-  out[n] = value();
-  for (let i = n + 1; i < closes.length; i++) {
-    const d = closes[i] - closes[i - 1];
-    gain = (gain * (n - 1) + Math.max(d, 0)) / n;
-    loss = (loss * (n - 1) + Math.max(-d, 0)) / n;
-    out[i] = value();
-  }
-  return out;
-}
-const rsi = (closes, n = 14) => rsiSeries(closes, n).at(-1);
-function ema(values, n) { // seeded with the SMA of the first n valid values
-  const out = values.map(() => null), k = 2 / (n + 1), start = values.findIndex(v => v != null);
-  if (start < 0 || values.length < start + n) return out;
-  let prev = values.slice(start, start + n).reduce((s, v) => s + v, 0) / n;
-  out[start + n - 1] = prev;
-  for (let i = start + n; i < values.length; i++) { prev = values[i] * k + prev * (1 - k); out[i] = prev; }
-  return out;
-}
-function macd(closes) {
-  const fast = ema(closes, 12), slow = ema(closes, 26);
-  const line = closes.map((_, i) => fast[i] != null && slow[i] != null ? fast[i] - slow[i] : null);
-  const signal = ema(line, 9);
-  return { line, signal, hist: line.map((v, i) => v != null && signal[i] != null ? v - signal[i] : null) };
-}
-function crossings(a, b, bars) { // gold: a moves above b; dead: a moves below b
-  const out = [];
-  for (let i = 1; i < a.length; i++) {
-    if (a[i] == null || b[i] == null || a[i - 1] == null || b[i - 1] == null) continue;
-    const before = a[i - 1] - b[i - 1], now = a[i] - b[i];
-    if (before <= 0 && now > 0) out.push({ i, time: bars[i].time, type: 'gold' });
-    else if (before >= 0 && now < 0) out.push({ i, time: bars[i].time, type: 'dead' });
-  }
-  return out;
-}
-function correlation(a, b) {
-  const ma = a.reduce((s, x) => s + x, 0) / a.length, mb = b.reduce((s, x) => s + x, 0) / b.length;
-  let ab = 0, aa = 0, bb = 0;
-  a.forEach((x, i) => { ab += (x - ma) * (b[i] - mb); aa += (x - ma) ** 2; bb += (b[i] - mb) ** 2; });
-  return ab / Math.sqrt(aa * bb);
-}
-function toWeekly(bars) { // one bar per Monday-based week, dated by its first trading day
-  const weeks = []; let key = null;
-  for (const b of bars) {
-    const d = new Date(b.time + 'T00:00:00Z');
-    const k = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10);
-    if (k !== key) { key = k; weeks.push({ ...b }); continue; }
-    const w = weeks.at(-1);
-    w.high = Math.max(w.high, b.high); w.low = Math.min(w.low, b.low); w.close = b.close; w.volume += b.volume;
-  }
-  return weeks;
-}
-function sessionOf(now, p) {
-  if (now < p.pre.start) return { key: 'wait', label: '休市', cls: 'closed' };
-  if (now < p.pre.end) return { key: 'pre', label: '盘前交易', cls: 'ext' };
-  if (now < p.regular.end) return { key: 'regular', label: '交易中', cls: 'live' };
-  if (now < p.post.end) return { key: 'post', label: '盘后交易', cls: 'ext' };
-  return { key: 'done', label: '休市', cls: 'closed' };
-}
-function extendedQuote(session, p, points, close) {
-  const from = session.key === 'pre' ? p.pre.start : (session.key === 'post' || session.key === 'done') ? p.regular.end : null;
-  if (from == null) return null;
-  const last = points.filter(x => x.time >= from).at(-1);
-  if (!last) return null;
-  return { price: last.close, time: last.time, change: (last.close / close - 1) * 100, label: session.key === 'pre' ? '盘前' : '盘后' };
-}
 const countdown = s => s >= 3600 ? `${Math.floor(s / 3600)} 小时 ${Math.floor(s % 3600 / 60)} 分` : `${Math.max(1, Math.ceil(s / 60))} 分钟`;
 
 // --- Data ---
@@ -557,7 +553,7 @@ new ResizeObserver(() => {
   requestAnimationFrame(() => { const r = chart.timeScale().getVisibleLogicalRange(); if (r) sub.timeScale().setVisibleLogicalRange(r); });
 }).observe($('sub'));
 
-const S = { sub: 'macd', view: 'day', months: 6, mstr: null, btc: null, intraday: null, session: null, ext: null, price: null, btcPrice: null, drawnKey: null, prevPrice: null, fail: false, loadedAt: 0 };
+const S = { health: {}, sub: 'macd', view: 'day', months: 6, mstr: null, btc: null, intraday: null, session: null, ext: null, price: null, btcPrice: null, drawnKey: null, prevPrice: null, fail: false, loadedAt: 0 };
 const VIEWS = { day: { short: 50, long: 200, name: '日' }, week: { short: 10, long: 40, name: '周' } };
 
 function bounds() {
@@ -736,13 +732,13 @@ function renderReadout() {
     const x = byDate.get(recent[i - 1].time), y = byDate.get(recent[i].time);
     if (x && y) { a.push(recent[i].close / recent[i - 1].close - 1); b.push(y / x - 1); }
   }
-  const c = correlation(a, b);
+  const c = correlation(a, b), bt = beta(a, b);
   const volWord = ratio >= 1.5 ? '成交量放大' : ratio <= 0.7 ? '成交量偏低' : '成交量正常';
   const maWord = d50 >= 0 && d200 >= 0 ? '在两条均线上方' : d50 < 0 && d200 < 0 ? '在两条均线下方' : d50 >= 0 ? '在 50 日线上方、200 日线下方' : '在 50 日线下方、200 日线上方';
   const pos = place < 33 ? '偏低' : place > 67 ? '偏高' : '中段';
   renderPosition();
   renderReview({ price, ma50, ma200, r, rw, ratio, c });
-  renderQuestions({ price, place, hi, lo, d50, d200, ma50, ma200, r, c, closes, ratio, btcChg, rsiWord, volWord, pos });
+  renderQuestions({ price, place, hi, lo, d50, d200, ma50, ma200, r, c, bt, closes, ratio, btcChg, rsiWord, volWord, pos });
 }
 
 // --- Six plain-language questions ---
@@ -776,7 +772,7 @@ function renderQuestions(d) {
   $('qVolaS').textContent = `其中最大的一天波动了 ${Math.max(...moves).toFixed(1)}%。这是过去的数字，以后可能更大。`;
 
   $('qBtc').innerHTML = `${money(S.btcPrice)} <span class="${dirClass(d.btcChg)}" style="font-size:15px">${pct(d.btcChg)}</span>`;
-  const corr = `近 60 个交易日，MSTR 和比特币的${d.c >= 0.6 ? '走势很同步' : d.c >= 0.3 ? '走势有一定同步' : '走势不太同步'}（相关系数 ${d.c.toFixed(2)}）。`;
+  const corr = `近 60 个交易日，比特币涨跌 1%，MSTR 平均约同向变动 ${d.bt.toFixed(1)}%。两者${d.c >= 0.6 ? '走势很同步' : d.c >= 0.3 ? '走势有一定同步' : '走势不太同步'}（相关系数 ${d.c.toFixed(2)}）。`;
   $('qBtcT').textContent = corr;
   const k = S.kpi?.btc;
   $('qBtcS').textContent = k ? `比历史最高价 ${money(k.ath)} 低 ${Math.abs(k.drawdownFromAth).toFixed(1)}%。` : '';
@@ -814,22 +810,6 @@ function renderMood() {
 }
 
 // --- Dollar-cost averaging simulation ---
-function dcaSim(bars, monthly, years, lastPrice) { // buys at the close of each month's first bar
-  const end = new Date(bars.at(-1).time + 'T00:00:00Z'); end.setUTCFullYear(end.getUTCFullYear() - years);
-  const from = end.toISOString().slice(0, 10), series = [], buys = [];
-  let month = null, units = 0, spent = 0, worst = 0, worstTime = null;
-  for (const b of bars) {
-    if (b.time < from) continue;
-    const m = b.time.slice(0, 7);
-    if (m !== month) { month = m; units += monthly / b.close; spent += monthly; buys.push(b.time); }
-    const avg = spent / units, pl = b.close / avg - 1;
-    if (pl < worst) { worst = pl; worstTime = b.time; }
-    series.push({ time: b.time, price: b.close, avg });
-  }
-  if (!buys.length) return null;
-  const avg = spent / units, value = units * lastPrice;
-  return { from: buys[0], count: buys.length, spent, units, avg, value, pl: value / spent - 1, worst, worstTime, series };
-}
 const dcaChart = LightweightCharts.createChart($('dcaChart'), { ...baseOptions(), layout: { ...baseOptions().layout, attributionLogo: false }, rightPriceScale: { borderColor: css('--line'), minimumWidth: 72 } });
 const dcaPrice = dcaChart.addLineSeries({ lineWidth: 2, color: css('--fg'), priceLineVisible: false, lastValueVisible: true });
 const dcaAvgLine = dcaChart.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false, lastValueVisible: true });
@@ -873,13 +853,6 @@ const mnavSecond = mnavChart.addLineSeries({ lineWidth: 2, color: css('--ma-long
 mnavMain.createPriceLine({ price: 1, color: css('--faint'), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '1 倍' });
 const H = { mode: 'official', months: 0, key: null };
 const dateCn = d => d.replaceAll('-', '/');
-function summarize(rows, field) { // rows are newest first, field holds a number on every kept row
-  const vals = rows.filter(r => r[field] != null);
-  if (!vals.length) return null;
-  const hi = vals.reduce((a, b) => b[field] > a[field] ? b : a), lo = vals.reduce((a, b) => b[field] < a[field] ? b : a);
-  const avg = vals.reduce((s, r) => s + r[field], 0) / vals.length, now = vals[0][field];
-  return { now, hi, lo, avg, share: vals.filter(r => r[field] < now).length / vals.length * 100, from: vals.at(-1).date, count: vals.length };
-}
 function renderHistory() {
   const all = S.history; if (!all) return;
   const cut = H.months ? (() => { const d = new Date(all[0].date + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - H.months); return d.toISOString().slice(0, 10); })() : '';
@@ -890,12 +863,12 @@ function renderHistory() {
   const pick = f => { const s = summarize(rows, f); return s && { ...s, field: f }; };
   if (H.mode === 'official') {
     mnavMain.setData(series('mNav')); mnavSecond.setData(series('mNavEntVal'));
-    $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>官网 mNAV（2026 年 6 月起）</span><span><i style="background:var(--ma-long)"></i>企业价值算法（2025 年起）</span>`;
+    $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>现行官网 mNAV（2026 年 6 月起）</span><span><i style="background:var(--ma-long)"></i>企业价值 ÷ 持币价值（2025 年起）</span>`;
     const a = pick('mNav'), b = pick('mNavEntVal'), live = toNum(S.kpi?.btc?.mNav);
     $('mnavNow').textContent = (live > 0 ? live : all.find(r => r.mNav != null).mNav).toFixed(2) + ' 倍';
     $('mnavSay').textContent = b ? `官网 mNAV 现在的数字。另一条企业价值算法现在是 ${b.now.toFixed(2)} 倍，高于这段时间 ${b.share.toFixed(0)}% 的日子。` : '官网 mNAV 现在的数字。';
     $('mnavFacts').innerHTML = (a ? stat('官网', a) : '') + (b ? stat('企业价值', b) : '');
-    $('mnavNote').textContent = '两条线都来自 Strategy 官网，但算法不同，不能直接相减。官网 mNAV 从 2026 年 6 月 15 日才有数据，更早的走势要看蓝线。虚线是 1 倍，低于它表示折价。';
+    $('mnavNote').textContent = '两条线都来自 Strategy 官网，但算法不同，不能直接相减。橙线大致是“股价 ÷ 每股净持币价值”，从 2026 年 6 月 15 日才有数据；蓝线是“企业价值 ÷ 持币价值”，能看到更早的走势。虚线是 1 倍，低于它表示折价。';
   } else {
     mnavMain.setData(series('simple')); mnavSecond.setData([]);
     $('mnavLegend').innerHTML = `<span><i style="background:var(--btc)"></i>市值 ÷ 持币价值（我根据官网数据算的）</span>`;
@@ -964,7 +937,8 @@ function renderCompany() {
   $('qMnavT').textContent = v >= 1
     ? `官网的 mNAV 是 ${v.toFixed(2)} 倍，也就是相对所持比特币价值有约 ${((v - 1) * 100).toFixed(0)}% 的溢价。`
     : `官网的 mNAV 是 ${v.toFixed(2)} 倍，也就是相对所持比特币价值有约 ${((1 - v) * 100).toFixed(0)}% 的折价。`;
-  $('qMnavS').textContent = '大于 1 叫溢价，小于 1 叫折价。' + (ext?.mNav ? `${ext.sessionType === 'Pre-Market' ? '盘前' : '盘后'}约 ${toNum(ext.mNav).toFixed(2)} 倍。` : '');
+  const net = toNum(k.netBtcPerShareUsd);
+  $('qMnavS').textContent = (net > 0 && S.price ? `买一股约 ${money(S.price)}，扣除债务后约对应 ${money(net)} 的比特币。` : '') + '大于 1 叫溢价，小于 1 叫折价。' + (ext?.mNav ? `${ext.sessionType === 'Pre-Market' ? '盘前' : '盘后'}约 ${toNum(ext.mNav).toFixed(2)} 倍。` : '');
   const held = toNum(k.btcHoldings), bn = millions => (millions / 100).toFixed(0) + ' 亿美元';
   const rows = [
     ['持有比特币', held.toLocaleString('en-US') + ' 枚'],
@@ -1057,7 +1031,7 @@ function renderPosition() {
 }
 for (const id of ['cost', 'qty']) $(id).value = store.get(id, '');
 const saveInputs = ids => ids.forEach(id => store.set(id, $(id).value));
-$('posForm').addEventListener('input', () => { saveInputs(['cost', 'qty']); if (S.mstr) renderReadout(); else renderPosition(); });
+$('posForm').addEventListener('input', () => { saveInputs(['cost', 'qty']); if (S.mstr) { renderReadout(); renderCheckup(); } else renderPosition(); });
 $('posForm').addEventListener('submit', e => e.preventDefault());
 
 // --- Sound ---
@@ -1145,8 +1119,8 @@ const TERMS = {
   rsi: '衡量最近 14 根 K 线上涨和下跌的相对力度，范围 0 到 100。日线看 14 天，周线看 14 周。常用 70 和 30 作为参考线，强势股可能长期停在高位，不能单独用来判断买卖。',
   cross: '短期均线上穿长期均线叫金叉，下穿叫死叉。均线是过去价格的平均，所以交叉总是滞后的，价格来回震荡时还会反复出现。',
   vol: '成交量是一天内成交的股数。放大说明这天比平时更活跃，常常伴随重要消息，但不能说明方向。',
-  corr: '相关系数衡量两者日涨跌的同步程度，1 表示完全同向，0 表示没有明显关系，-1 表示完全反向。过去的联动不保证以后也一样。',
-  mnav: 'MSTR 这家公司的主要资产是比特币。mNAV 把公司的价值和它所持比特币的价值相比。比如 1.10 倍，大致表示这份比特币被市场多算了 10%。大于 1 叫溢价，小于 1 叫折价。这里的数字直接取自 Strategy 官网，官网有两种算法，我没有查到官网对主指标的完整公式。',
+  corr: '第一个数字是过去 60 个交易日的平均变动倍数，专业叫 Beta。比如 1.5 表示比特币涨 1% 时，MSTR 平均约涨 1.5%，跌的时候也一样。这是平均值，单日可能差很多，这个倍数也会随时间变化。相关系数看的是两者同步的程度，1 表示完全同向。',
+  mnav: 'MSTR 这家公司的主要资产是比特币。mNAV 就是看这份比特币被市场卖得贵还是便宜。现行算法大致是：股价 ÷ 每股对应的净持币价值（已扣除债务）。比如 1.10 倍，大致相当于花 1.10 美元买到价值 1 美元的比特币。大于 1 叫溢价，小于 1 叫折价。数字直接取自 Strategy 官网。官网页面上我没有查到完整公式，这个算法说法来自第三方开源项目，我用官网的盘前数字核对过是吻合的。',
 };
 document.addEventListener('click', e => {
   const btn = e.target.closest('.q'); if (!btn) return;
@@ -1155,6 +1129,154 @@ document.addEventListener('click', e => {
   const p = document.createElement('p'); p.className = 'explain'; p.textContent = TERMS[btn.dataset.term];
   btn.closest('.head').after(p);
 });
+
+// --- Trading plan: the viewer's own rules, kept in this browser ---
+const RULES = {
+  priceBelow: { label: v => `价格跌到或低于 ${money(Number(v))}` },
+  priceAbove: { label: v => `价格涨到或高于 ${money(Number(v))}` },
+  drawdown: { label: v => `从设定后的高点回撤 ${v}%` },
+  belowMa200: { label: v => `连续 ${v} 个交易日收盘低于 200 日线` },
+  mnavBelow: { label: v => `官网 mNAV 低于或等于 ${Number(v).toFixed(2)} 倍` },
+  mnavAbove: { label: v => `官网 mNAV 高于或等于 ${Number(v).toFixed(2)} 倍` },
+  date: { label: v => `到了 ${dateCn(v)}` },
+};
+const plan = { why: '', review: '', rules: [], trades: [], reviewFired: '', ...store.get('plan', {}) };
+const savePlan = () => store.set('plan', plan);
+const bjToday = () => new Date(Date.now() + 8 * 36e5).toISOString().slice(0, 10);
+const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function ruleContext() {
+  // 判断用已走完的 K 线：盘中那根还没收盘，不算数
+  const bars = S.session?.key === 'regular' ? S.mstr.bars.slice(0, -1) : S.mstr.bars;
+  const live = toNum(S.kpi?.btc?.mNav);
+  return { price: S.price, bars, mnav: live > 0 ? live : null, today: bjToday() };
+}
+function ruleDistance(rule) {
+  const v = Number(rule.value), p = S.price;
+  if (!p) return '';
+  if (rule.type === 'priceBelow' || rule.type === 'priceAbove') return `离现价 ${pct((v / p - 1) * 100)}`;
+  if (rule.type === 'mnavBelow' || rule.type === 'mnavAbove') { const m = toNum(S.kpi?.btc?.mNav); return m > 0 ? `现在 ${m.toFixed(2)} 倍` : ''; }
+  if (rule.type === 'drawdown') {
+    const seen = S.mstr.bars.filter(b => b.time >= rule.created).map(b => b.close), peak = Math.max(p, ...seen);
+    return `高点 ${money(peak)}，现在回撤 ${Math.abs((p / peak - 1) * 100).toFixed(1)}%`;
+  }
+  return '';
+}
+function renderPlan() {
+  $('planWhy').value = document.activeElement === $('planWhy') ? $('planWhy').value : plan.why;
+  $('planReview').value = plan.review || '';
+  const body = plan.rules.map(r => {
+    const tested = r.showBack ? backtestRule(r, S.mstr?.bars || [], S.history || []) : null;
+    const backRow = !r.showBack ? '' : `<tr><td colspan="4"><div class="back">${backText(tested)}</div></td></tr>`;
+    return `<tr class="rule-row ${r.firedAt ? 'fired' : ''}"><td>${r.firedAt ? '已触发 ' + dateCn(r.firedAt) : '等待中'}</td><td><b>${escapeHtml(RULES[r.type].label(r.value))}</b><br>${escapeHtml(ruleDistance(r))}</td><td>${escapeHtml(r.note) || '<span style="color:var(--warn)">还没写</span>'}</td><td>${r.type === 'date' ? '' : `<button type="button" class="row-btn" data-act="back" data-id="${r.id}">${r.showBack ? '收起' : '回看过去'}</button>`}${r.firedAt ? `<button type="button" class="row-btn" data-act="rearm" data-id="${r.id}">重新启用</button>` : ''}<button type="button" class="row-btn" data-act="del" data-id="${r.id}">移除</button></td></tr>${backRow}`;
+  }).join('');
+  $('ruleTable').innerHTML = plan.rules.length ? `<tr><th>状态</th><th>条件</th><th>我打算</th><th>操作</th></tr>${body}` : '<tr><td class="note" style="text-align:left;white-space:normal">还没有规则。可以点上面的例子，填上你自己的数字。</td></tr>';
+  $('tradeTable').innerHTML = plan.trades.length ? '<tr><th>日期</th><th>方向</th><th>股数</th><th>成交价</th><th>原因</th><th></th></tr>' + plan.trades.map(x => `<tr><td style="text-align:left">${dateCn(x.date)}</td><td style="text-align:left">${escapeHtml(x.side)}</td><td style="text-align:left">${x.shares}</td><td style="text-align:left">${money(x.price)}</td><td style="text-align:left;white-space:normal">${escapeHtml(x.note)}</td><td><button type="button" class="row-btn" data-trade="${x.id}">移除</button></td></tr>`).join('') : '';
+  renderCheckup();
+}
+function backText(r) {
+  if (!r) return '没有可回看的数据。';
+  const fmt = v => v == null ? '未满' : pct(v);
+  const head = `从 ${dateCn(r.from)} 到现在（${r.days} 个交易日，按收盘价），这条规则触发过 <b>${r.events.length}</b> 次。`;
+  if (!r.events.length) return head + '没有触发过，不代表以后不会。';
+  const list = r.events.slice(-6).reverse().map(e => `${dateCn(e.date)}（${money(e.close)}）：之后 20 日 ${fmt(e.after20)}，60 日 ${fmt(e.after60)}`).join('<br>');
+  return `${head}${r.events.length > 6 ? '下面是最近 6 次：' : ''}<br>${list}<br>只是记录过去的走势，次数这么少不能说明规则有效，也别为了让这些数字好看而反复改规则。`;
+}
+function renderCheckup() {
+  const closes = S.mstr?.bars.slice(-61).map(b => b.close) || [];
+  const moves = closes.slice(1).map((v, i) => Math.abs(v / closes[i] - 1) * 100);
+  const move = moves.length ? moves.reduce((s, v) => s + v, 0) / moves.length : 0;
+  $('planCheck').innerHTML = planCheckup(plan, move, S.price || 0).map(c => `<li class="${c.ok ? '' : 'miss'}"><b>${c.ok ? '✓' : '○'} ${c.text}</b>${c.ok ? '' : c.tip}</li>`).join('');
+  if (!S.mstr) return;
+  const cost = Number($('cost').value), qty = Number($('qty').value), value = qty > 0 ? qty * S.price : 10000, worst = maxDrawdown(S.mstr.bars);
+  const row = (a, b) => `<div><dt>${a}</dt><dd>${b}</dd></div>`, usd = n => '$' + Math.round(n).toLocaleString('en-US');
+  const scene = p => row(`如果从现价跌 ${p}%`, `账面少 ${usd(value * p / 100)}`);
+  const costRow = cost > 0 && qty > 0 ? row('相对我的成本', S.price >= cost ? `现价已高于成本 ${((S.price / cost - 1) * 100).toFixed(1)}%` : `要涨 ${((cost / S.price - 1) * 100).toFixed(1)}% 才回本`) : '';
+  $('planStress').innerHTML = row(qty > 0 ? '我的持仓现值' : '假设持仓', usd(value)) + scene(30) + scene(50) + scene(70) + costRow + row('过去 5 年最大跌幅', `${worst.pct.toFixed(1)}%`);
+  $('planStressNote').textContent = `最大跌幅发生在 ${dateCn(worst.from)} 到 ${dateCn(worst.to)}。${qty > 0 ? '' : '在“我的持仓”填入股数，会按你的持仓计算。'}以后可能跌得更多。亏损越大，回本越难：跌 50% 要涨 100% 才回本。`;
+}
+function checkPlan() {
+  if (!S.price || S.fail) return; // 数据有问题时不触发，避免误报
+  const ctx = ruleContext(), fired = [];
+  for (const r of plan.rules) {
+    if (r.firedAt || !evalRule(r, ctx)) continue;
+    r.firedAt = ctx.today;
+    fired.push(`${RULES[r.type].label(r.value)}。你的打算：${r.note || '还没写'}`);
+  }
+  if (plan.review && ctx.today >= plan.review && plan.reviewFired !== plan.review) {
+    plan.reviewFired = plan.review;
+    fired.push('到了你定的复盘日期，看一遍计划吧');
+  }
+  if (!fired.length) return;
+  savePlan();
+  const message = '交易计划：' + fired.join('；') + (plan.why ? `。当初的理由：${plan.why}` : '');
+  $('bannerText').textContent = '提醒：' + message; $('banner').hidden = false;
+  chime();
+  fetch('/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) }).catch(() => {});
+}
+function setRuleInput() {
+  const type = $('ruleType').value, input = $('ruleValue');
+  input.type = type === 'date' ? 'date' : 'number';
+  input.step = type === 'belowMa200' ? '1' : 'any';
+  input.min = type === 'belowMa200' ? '1' : type === 'date' ? '' : '0.01';
+  if (type === 'drawdown') input.max = '99'; else input.removeAttribute('max');
+  input.value = '';
+  input.placeholder = { priceBelow: '美元', priceAbove: '美元', drawdown: '%', belowMa200: '天数', mnavBelow: '倍', mnavAbove: '倍' }[type] || '';
+}
+$('ruleType').addEventListener('change', setRuleInput);
+setRuleInput();
+$('tmpl').addEventListener('click', e => {
+  const t = e.target.dataset.t; if (!t) return;
+  $('ruleType').value = t; setRuleInput();
+  $('ruleNote').placeholder = e.target.dataset.n;
+  $('ruleValue').focus();
+});
+$('ruleForm').addEventListener('submit', e => {
+  e.preventDefault();
+  plan.rules.push({ id: String(Date.now()), type: $('ruleType').value, value: $('ruleValue').value, note: $('ruleNote').value.trim(), created: bjToday() });
+  $('ruleValue').value = ''; $('ruleNote').value = ''; $('ruleNote').placeholder = '我打算怎么做（自己写）';
+  savePlan(); renderPlan(); checkPlan(); renderPlan();
+});
+$('ruleTable').addEventListener('click', e => {
+  const id = e.target.dataset.id, act = e.target.dataset.act; if (!id) return;
+  const r = plan.rules.find(x => x.id === id); if (!r) return;
+  if (act === 'del') plan.rules = plan.rules.filter(x => x.id !== id);
+  if (act === 'rearm') r.firedAt = null;
+  if (act === 'back') r.showBack = !r.showBack;
+  savePlan(); renderPlan();
+});
+$('planWhy').addEventListener('input', () => { plan.why = $('planWhy').value; savePlan(); renderCheckup(); });
+$('planReview').addEventListener('change', () => { plan.review = $('planReview').value; savePlan(); renderCheckup(); });
+$('tradeDate').value = bjToday();
+$('tradeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  plan.trades.unshift({ id: String(Date.now()), date: $('tradeDate').value, side: $('tradeSide').value, shares: Number($('tradeShares').value), price: Number($('tradePrice').value), note: $('tradeNote').value.trim() });
+  for (const id of ['tradeShares', 'tradePrice', 'tradeNote']) $(id).value = '';
+  savePlan(); renderPlan();
+});
+$('tradeTable').addEventListener('click', e => {
+  const id = e.target.dataset.trade; if (!id) return;
+  plan.trades = plan.trades.filter(x => x.id !== id); savePlan(); renderPlan();
+});
+
+// --- Source health ---
+const SOURCES = [
+  ['yahoo', 'Yahoo Finance', 'MSTR 和比特币行情', () => S.mstr && bj(S.mstr.meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 5],
+  ['vix', 'Yahoo Finance', '美股恐慌指数 VIX', () => S.vix && bj(S.vix.meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 5],
+  ['kpi', 'Strategy 官网', 'mNAV、持币数、情绪指数', () => S.kpi?.mstr?.timeStamp, null],
+  ['history', 'Strategy 官网', 'mNAV 历史和持币变化', () => S.history?.[0]?.date, 5],
+  ['earn', 'Nasdaq', '财报日期', () => S.earn?.[0]?.date, null],
+];
+function dayAge(key) {
+  const t = key === 'yahoo' ? S.mstr?.meta.regularMarketTime * 1000 : key === 'vix' ? S.vix?.meta.regularMarketTime * 1000 : key === 'history' && S.history ? Date.parse(S.history[0].date) : null;
+  return t ? (Date.now() - t) / 864e5 : null;
+}
+function renderSources() {
+  $('sourceTable').innerHTML = '<tr><th>来源</th><th>内容</th><th>数据日期</th><th>状态</th></tr>' + SOURCES.map(([key, name, what, date, limit]) => {
+    const state = S.health[key], age = dayAge(key), old = limit && age != null && age > limit;
+    const [word, cls] = state === false ? [date() ? '取不到，显示上次数据' : '取不到', 'down'] : state == null ? ['读取中', ''] : old ? ['可能过期', 'down'] : ['正常', ''];
+    return `<tr><td>${name}</td><td>${what}</td><td>${date() || '--'}</td><td class="${cls}">${word}</td></tr>`;
+  }).join('');
+}
 
 // --- Refresh loop ---
 async function refresh() {
@@ -1165,18 +1287,22 @@ async function refresh() {
     S.price = S.mstr.meta.regularMarketPrice; S.btcPrice = S.btc.meta.regularMarketPrice;
     S.session = sessionOf(Date.now() / 1000, S.intraday.periods);
     S.ext = extendedQuote(S.session, S.intraday.periods, S.intraday.points, S.price);
-    S.fail = false; S.loadedAt = Date.now();
+    S.fail = false; S.loadedAt = Date.now(); S.health.yahoo = true;
     if (firstLoad) S.rangeUnset = true;
+    // 行情先显示；官网历史数据第一次要等十几秒，到了再补上
+    const showAll = () => { renderBand(); renderHeader(); draw(false); renderReadout(); renderStatus(); renderSources(); checkAlerts(); checkPlan(); renderPlan(); window.renderExtras?.(); };
+    showAll();
     // 官网数据和行情分开取：官网取不到时，其他功能照常
     const [km, kb, vx, hs, er] = await Promise.allSettled([getJson('/api/strategy/mstr'), getJson('/api/strategy/btc'), getJson('/api/chart?symbol=' + encodeURIComponent('^VIX')), getJson('/api/strategy/history'), getJson('/api/earnings')]);
     S.tried = true;
+    S.health.vix = vx.status === 'fulfilled'; S.health.history = hs.status === 'fulfilled'; S.health.earn = er.status === 'fulfilled'; S.health.kpi = km.status === 'fulfilled' && kb.status === 'fulfilled';
     if (hs.status === 'fulfilled') S.history = hs.value;
     if (er.status === 'fulfilled') S.earn = er.value.map(e => { const [mo, d, y] = e.dateReported.split('/'); return { ...e, date: `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}` }; });
     if (vx.status === 'fulfilled') S.vix = parseDaily(vx.value);
     S.kpi = { tried: true, mstr: km.status === 'fulfilled' ? km.value[0] : S.kpi?.mstr, btc: kb.status === 'fulfilled' ? kb.value.results : S.kpi?.btc };
-    renderBand(); renderHeader(); draw(false); renderReadout(); renderStatus(); checkAlerts();
+    showAll();
   } catch (err) {
-    S.fail = true; renderStatus();
+    S.fail = true; S.health.yahoo = false; renderStatus(); renderSources();
     if (!S.mstr) { $('sentence').textContent = '暂时取不到行情。请检查网络，页面每分钟会自动重试。'; $('chip').className = 'bad'; $('chip').textContent = '连接中断'; }
   }
 }
@@ -1188,5 +1314,6 @@ refresh();
 setInterval(refresh, 60000);
 setInterval(() => { renderBand(); renderStatus(); }, 5000);
 </script>
+<script src="/extras.js"></script>
 </body>
 </html>
