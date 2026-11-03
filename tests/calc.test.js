@@ -1,7 +1,7 @@
 // 计算的预期值都是手算的，避免测试只是在重复代码本身。
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const calc = require('../calc.js');
+const calc = require('../web/calc.js');
 
 const close = (actual, expected, digits = 6) => assert.ok(Math.abs(actual - expected) < 10 ** -digits, `${actual} != ${expected}`);
 

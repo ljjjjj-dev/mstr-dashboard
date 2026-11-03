@@ -114,12 +114,11 @@ sh build-mac-app.sh
 
 | 文件 | 作用 |
 |---|---|
-| `index.html` | 页面和显示逻辑 |
-| `calc.js` | 指标和定投计算 |
+| `web/` | 页面、计算代码和图表库 |
 | `server.py` | 本地服务，只监听本机 |
 | `build-mac-app.sh` | 生成 Mac 启动应用 |
-| `lightweight-charts.js` | TradingView 图表库 |
 | `tests/` | 自动测试 |
+| `docs/` | 截图和第三方许可证声明 |
 
 运行测试：
 
@@ -142,4 +141,4 @@ python3 -m unittest discover tests
 
 ## 许可证
 
-本项目使用 [MIT 许可证](LICENSE)，不提供任何保证。图表库 [Lightweight Charts](https://github.com/tradingview/lightweight-charts) 使用 Apache-2.0 许可证，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+本项目使用 [MIT 许可证](LICENSE)，不提供任何保证。图表库 [Lightweight Charts](https://github.com/tradingview/lightweight-charts) 使用 Apache-2.0 许可证，详见 [docs/THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)。

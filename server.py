@@ -18,9 +18,9 @@ STRATEGY_CACHE_SECONDS = 120
 STRATEGY_PATHS = {"/api/strategy/mstr": "mstrKpiData", "/api/strategy/btc": "bitcoinKpis"}
 IDLE_EXIT_SECONDS = 12 * 3600  # 浏览器会暂停后台标签页，所以要等得足够久才能判定页面已关闭
 STATIC = {
-    "/": ("index.html", "text/html; charset=utf-8"),
-    "/lightweight-charts.js": ("lightweight-charts.js", "text/javascript; charset=utf-8"),
-    "/calc.js": ("calc.js", "text/javascript; charset=utf-8"),
+    "/": ("web/index.html", "text/html; charset=utf-8"),
+    "/lightweight-charts.js": ("web/lightweight-charts.js", "text/javascript; charset=utf-8"),
+    "/calc.js": ("web/calc.js", "text/javascript; charset=utf-8"),
 }
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
