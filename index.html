@@ -6,7 +6,7 @@
 <title>MSTR 看盘</title>
 <script>try { document.documentElement.dataset.theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'; } catch (e) { document.documentElement.dataset.theme = 'light'; }</script>
 <style>
-/* 一页看完：顶部是价格和交易时段，接着是白话问题，图表配读法和价位，下面是定投、信号和个人工具。默认浅色，可切换深色。 */
+/* 一页看完：顶部是价格和交易时段，接着是问题卡片，图表配读法和价位，下面是定投、信号和个人工具。默认浅色，可切换深色。 */
 :root {
   color-scheme: light;
   --ink: #f1f4f7; --panel: #ffffff; --panel-2: #e8edf2; --line: #d9e0e6; --grid: rgba(120,140,155,.2);
@@ -291,7 +291,7 @@ footer { font-size: 12px; color: var(--faint); }
 
     <aside class="panel read">
       <details class="guide" id="guide" open>
-        <summary>K 线怎么看（1 分钟学会）</summary>
+        <summary>K 线说明</summary>
         <svg viewBox="0 0 310 190" role="img" aria-label="红色和绿色 K 线的结构示意">
           <text class="t" x="52" y="16" text-anchor="middle">红色：这天收高了</text>
           <line x1="52" y1="28" x2="52" y2="170" stroke="var(--up)" stroke-width="2"/><rect x="36" y="58" width="32" height="82" rx="2" fill="var(--up)"/>
@@ -305,7 +305,7 @@ footer { font-size: 12px; color: var(--faint); }
           <li><b>颜色只看当天。</b>收盘高于开盘是红色，低于开盘是绿色。所以比前一天跌了，也可能是红色。</li>
           <li><b>两条线是平均价。</b>淡黄线是过去 50 天的平均，蓝线是过去 200 天的平均。</li>
           <li><b>底部的柱子是成交量。</b>越高说明这天买卖越活跃。</li>
-          <li><b>动手试试：</b>把鼠标移到任意一根 K 线上，图上方会用白话读给你听。</li>
+          <li><b>查看某一天：</b>把鼠标移到 K 线上，图上方会显示当天的数据。</li>
         </ul>
       </details>
       <div class="item">
