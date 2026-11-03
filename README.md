@@ -2,6 +2,8 @@
 
 这是一个个人学习项目，用来在本地查看 MSTR（Strategy Inc）的行情、mNAV 和相关数据。代码公开，仅供参考。
 
+**目前只支持 macOS，暂不支持 Windows、Linux、iPhone 和 Android。**
+
 ![页面截图](docs/screenshot.png)
 
 > 本项目不构成投资建议，不提供买卖判断，也不预测涨跌。数据可能有延迟或错误。本项目与 Strategy、Yahoo、Nasdaq 没有关联。
@@ -20,7 +22,7 @@
 
 ## 运行环境
 
-- macOS（其他系统未测试）
+- macOS（其他系统不支持）
 - Python 3，无需安装其他依赖
 - 需要联网读取行情数据
 
