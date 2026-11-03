@@ -122,7 +122,7 @@ sh build-mac-app.sh
 | `server.py` | 本地服务，只监听本机 |
 | `build-mac-app.sh` | 生成 Mac 启动应用 |
 | `tests/` | 自动测试 |
-| `docs/` | 截图和第三方许可证声明 |
+| `docs/` | 截图、应用图标和第三方许可证声明 |
 
 运行测试：
 
