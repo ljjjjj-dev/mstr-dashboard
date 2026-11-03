@@ -4,8 +4,6 @@
 
 **目前只支持 macOS，暂不支持 Windows、Linux、iPhone 和 Android。**
 
-![页面截图](docs/screenshot.png)
-
 > 本项目不构成投资建议，不提供买卖判断，也不预测涨跌。数据可能有延迟或错误。本项目与 Strategy、Yahoo、Nasdaq 没有关联。
 
 ## 内容
@@ -122,7 +120,7 @@ sh build-mac-app.sh
 | `server.py` | 本地服务，只监听本机 |
 | `build-mac-app.sh` | 生成 Mac 启动应用 |
 | `tests/` | 自动测试 |
-| `docs/` | 截图、应用图标和第三方许可证声明 |
+| `docs/` | 应用图标和第三方许可证声明 |
 
 运行测试：
 
