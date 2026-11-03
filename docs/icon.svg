@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde4ec"/></linearGradient>
+    <linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6a55"/><stop offset="1" stop-color="#c8302a"/></linearGradient>
+    <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2fd39a"/><stop offset="1" stop-color="#0a8c5f"/></linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="0.45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <filter id="s" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#1b2a3a" flood-opacity="0.25"/></filter>
+    <filter id="c" x="-40%" y="-20%" width="180%" height="150%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#1b2a3a" flood-opacity="0.28"/></filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#s)"/>
+  <rect x="101" y="101" width="822" height="822" rx="184" fill="none" stroke="#fff" stroke-width="3"/>
+  <g filter="url(#c)" stroke-linecap="round">
+    <line x1="400" y1="330" x2="400" y2="770" stroke="#0a8c5f" stroke-width="20"/>
+    <rect x="320" y="400" width="160" height="300" rx="40" fill="url(#gr)"/>
+    <rect x="320" y="400" width="160" height="300" rx="40" fill="url(#shine)"/>
+  </g>
+  <g filter="url(#c)" stroke-linecap="round">
+    <line x1="624" y1="230" x2="624" y2="700" stroke="#c8302a" stroke-width="20"/>
+    <rect x="544" y="290" width="160" height="350" rx="40" fill="url(#r)"/>
+    <rect x="544" y="290" width="160" height="350" rx="40" fill="url(#shine)"/>
+  </g>
+</svg>

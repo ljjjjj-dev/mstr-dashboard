@@ -9,5 +9,8 @@ set cmd to "export PATH=/Library/Frameworks/Python.framework/Versions/Current/bi
 do shell script cmd
 EOF
 osacompile -o "启动看盘.app" "$script"
+# 换上 docs/icon.icns 图标（源文件是 docs/icon.svg）
+cp docs/icon.icns "启动看盘.app/Contents/Resources/applet.icns"
+touch "启动看盘.app"
 rm -f "$script"
 echo "已生成：启动看盘.app"
