@@ -189,6 +189,27 @@ function perShareHistory(rows) { // rows 从新到旧；每股含币量和隐含
   return { asc, first, now, peak, fromPeak: change(peak.perShare, now.perShare), perShareChange: change(first.perShare, now.perShare), btcChange: change(first.btc, now.btc), sharesChange: change(first.shares, now.shares), sharesFromPeak: change(peak.shares, now.shares), btcFromPeak: change(peak.btc, now.btc) };
 }
 
+function rebaseSeries(bars, from) { // 从 from 之后的第一根 K 线算起，每天相对起点的涨跌（%）
+  const part = bars.filter(b => b.time >= from);
+  if (part.length < 2) return null;
+  const base = part[0].close, points = part.map(b => ({ time: b.time, value: (b.close / base - 1) * 100 }));
+  return { from: part[0].time, points, change: points.at(-1).value };
+}
+function averageSeries(list) { // 等额买入、之后不调仓：只取所有标的都有数据的日子
+  const maps = list.filter(Boolean).map(s => new Map(s.points.map(p => [p.time, p.value])));
+  if (!maps.length) return null;
+  const points = [...maps[0].keys()].filter(t => maps.every(m => m.has(t))).sort()
+    .map(time => ({ time, value: maps.reduce((s, m) => s + m.get(time), 0) / maps.length }));
+  return points.length ? { points, change: points.at(-1).value } : null;
+}
+
+function qdiiStatus(row) { // 把申购状态翻成一句话，并给出排序用的“能买多少”
+  const text = row.purchase_status || '';
+  if (!row.buyable || /暂停/.test(text)) return { label: '暂停申购', open: false, limit: 0 };
+  if (row.daily_limit > 0) return { label: `开放，每天最多 ${row.daily_limit.toLocaleString('zh-CN')} 元`, open: true, limit: row.daily_limit };
+  return { label: '开放，不限额', open: true, limit: Infinity };
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { sma, rsiSeries, rsi, ema, macd, crossings, correlation, beta, toWeekly, sessionOf, extendedQuote, dcaSim, summarize, closesBelowAverage, evalRule, backtestRule, maxDrawdown, isDownside, planCheckup, perShareHistory };
+  module.exports = { sma, rsiSeries, rsi, ema, macd, crossings, correlation, beta, toWeekly, sessionOf, extendedQuote, dcaSim, summarize, closesBelowAverage, evalRule, backtestRule, maxDrawdown, isDownside, planCheckup, perShareHistory, rebaseSeries, averageSeries, qdiiStatus };
 }

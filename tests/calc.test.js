@@ -197,3 +197,30 @@ test('perShareHistory：持币和股数都变时，算对每股含币量和变�
   close(r.sharesFromPeak, 100);
   assert.equal(calc.perShareHistory([{ date: 'a', btcHoldings: 1 }]), null);
 });
+
+test('rebaseSeries：从起点后的第一根 K 线算涨跌', () => {
+  const bars = [{ time: '2026-01-01', close: 50 }, { time: '2026-01-05', close: 100 }, { time: '2026-01-06', close: 150 }];
+  const r = calc.rebaseSeries(bars, '2026-01-02');
+  assert.equal(r.from, '2026-01-05');
+  assert.deepEqual(r.points.map(p => p.value), [0, 50]);
+  close(r.change, 50);
+  assert.equal(calc.rebaseSeries(bars, '2026-01-06'), null);
+});
+
+test('averageSeries：只平均大家都有数据的日子', () => {
+  const a = { points: [{ time: '1', value: 0 }, { time: '2', value: 10 }, { time: '3', value: 20 }] };
+  const b = { points: [{ time: '1', value: 0 }, { time: '3', value: -20 }] };
+  const r = calc.averageSeries([a, null, b]);
+  assert.deepEqual(r.points, [{ time: '1', value: 0 }, { time: '3', value: 0 }]);
+  assert.equal(r.change, 0);
+  assert.equal(calc.averageSeries([null]), null);
+});
+
+test('qdiiStatus：区分暂停、限额和不限额', () => {
+  assert.deepEqual(calc.qdiiStatus({ buyable: false, purchase_status: '暂停申购' }), { label: '暂停申购', open: false, limit: 0 });
+  assert.equal(calc.qdiiStatus({ buyable: true, purchase_status: '暂停大额申购' }).open, false);
+  const small = calc.qdiiStatus({ buyable: true, purchase_status: '限大额(单日投资上限10元)', daily_limit: 10 });
+  assert.equal(small.open, true);
+  assert.equal(small.limit, 10);
+  assert.equal(calc.qdiiStatus({ buyable: true, purchase_status: '开放申购', daily_limit: null }).limit, Infinity);
+});

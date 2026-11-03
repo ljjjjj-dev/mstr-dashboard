@@ -91,10 +91,9 @@ h2 { font: 600 15px/1.3 var(--sans); margin: 0; }
 .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
 .stage { position: relative; flex: 1; min-height: clamp(340px, 50vh, 560px); }
 .chart-panel { display: flex; flex-direction: column; }
-#chart, #compare { position: absolute; inset: 0; }
+#chart { position: absolute; inset: 0; }
 #ohlc { min-height: 44px; margin-bottom: 6px; font-size: 13px; line-height: 1.6; color: var(--muted); }
 #ohlc b { font-weight: 600; color: var(--fg); }
-#cmpNote { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
 
 /* Position readout */
 .read { display: grid; gap: 15px; align-content: start; }
@@ -112,6 +111,19 @@ h2 { font: 600 15px/1.3 var(--sans); margin: 0; }
 .dca-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 880px) { .dca-body { grid-template-columns: minmax(0, 1fr); } }
 #dcaChart, #mnavChart, #psChart { height: 280px; }
+#magChart { height: 340px; }
+#qdiiTable td, #qdiiTable th { text-align: left; white-space: normal; }
+#qdiiTable td.open { color: var(--fg); font-weight: 600; }
+#qdiiTable td.shut { color: var(--faint); }
+.mag-picks { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.mag-row { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); align-items: start; gap: 12px; }
+.mag-row > b { font-weight: 600; color: var(--fg); line-height: 22px; }
+.mag-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5em, 1fr)); gap: 0 12px; } /* 所有分组同宽同列，勾选框上下对齐 */
+.mag-list label { line-height: 22px; white-space: nowrap; }
+#magNote:empty { display: none; }
+.mag-picks label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.mag-picks i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; }
+#magTable td:first-child, #magTable th:first-child { text-align: left; }
 .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 @media (max-width: 880px) { .two { grid-template-columns: minmax(0, 1fr); } }
 .next { padding: 8px 12px; font-size: 13.5px; background: var(--panel-2); border-radius: 6px; }
@@ -170,6 +182,15 @@ h2 { font: 600 15px/1.3 var(--sans); margin: 0; }
 .fold[open] > summary { margin-bottom: 12px; }
 .fold > summary span { font: 500 13px var(--sans); color: var(--muted); }
 .fold .review-body { display: grid; gap: 14px; }
+
+/* Folding: every block except the overview cards */
+.fold-btn { margin-left: auto; flex: none; padding: 1px 10px; font-size: 12.5px; }
+.panel.folded > :not(:first-child) { display: none !important; }
+.panel.folded > :first-child { margin-bottom: 0; }
+.fold-group.folded { display: none !important; }
+.fold-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.fold-bar b { font: 600 15px/1.3 var(--sans); }
+.fold-bar:has(+ .fold-group:not(.folded)) { display: none; }
 
 /* Technical review */
 .review { display: grid; gap: 14px; }
@@ -268,7 +289,7 @@ footer { font-size: 12px; color: var(--faint); }
     <section class="panel chart-panel">
       <div class="toolbar">
         <div class="seg" id="views">
-          <button data-view="day" class="on" type="button">日 K</button><button data-view="week" type="button">周 K</button><button data-view="compare" type="button">对比比特币</button>
+          <button data-view="day" class="on" type="button">日 K</button><button data-view="week" type="button">周 K</button>
         </div>
         <div class="seg" id="ranges">
           <button data-m="3" type="button">3月</button><button data-m="6" class="on" type="button">6月</button><button data-m="12" type="button">1年</button><button data-m="24" type="button">2年</button><button data-m="60" type="button">5年</button>
@@ -283,11 +304,9 @@ footer { font-size: 12px; color: var(--faint); }
       <div id="ohlc"></div>
       <div class="stage">
         <div id="chart"></div>
-        <div id="compare" class="off"></div>
       </div>
       <div id="sub"></div>
       <p class="note" id="subNote"></p>
-      <p id="cmpNote" hidden></p>
     </section>
 
     <aside class="panel read">
@@ -368,6 +387,32 @@ footer { font-size: 12px; color: var(--faint); }
       <p class="hint">根据官网每日持币数的变化推算，日期可能和公告日差几天，也可能把相邻两笔合并。“当时币价”是当日比特币收盘价，不是公司实际成交价。实际成本请看 <a href="https://www.strategy.com/ledger" target="_blank" rel="noopener">官网账本</a>。</p>
     </section>
   </div>
+
+  <section class="panel card">
+    <div class="dca-top">
+      <div class="head"><h2 style="color:var(--fg)">走势对比</h2><button class="q" data-term="mag7" type="button" aria-label="解释走势对比">?</button></div>
+      <div class="seg" id="magRange"><button data-m="3" type="button">3月</button><button data-m="6" type="button">6月</button><button data-m="12" class="on" type="button">1年</button><button data-m="24" type="button">2年</button><button data-m="60" type="button">5年</button></div>
+    </div>
+    <div class="mag-picks" id="magPicks"></div>
+    <div class="dca-body">
+      <div class="card">
+        <div class="table-wrap"><table id="magTable"></table></div>
+        <p class="note" id="magNote"></p>
+      </div>
+      <div><div id="magChart"></div></div>
+    </div>
+  </section>
+
+  <section class="panel card">
+    <div class="dca-top">
+      <div class="head"><h2 style="color:var(--fg)">纳指 100 和标普 500 场外基金：现在能不能买</h2><button class="q" data-term="qdii" type="button" aria-label="解释场外 QDII">?</button></div>
+      <div class="seg" id="qdiiClass"><button data-c="A" class="on" type="button">A 类</button><button data-c="C" type="button">C 类</button><button data-c="all" type="button">全部类别</button></div>
+      <div class="seg" id="qdiiFilter"><button data-f="open" class="on" type="button">只看能买的</button><button data-f="all" type="button">全部</button></div>
+    </div>
+    <p class="say" id="qdiiSay">正在读取…</p>
+    <div class="table-wrap"><table id="qdiiTable"></table></div>
+    <p class="hint" id="qdiiNote"></p>
+  </section>
 
   <section class="panel card">
     <div class="dca-top">
@@ -554,10 +599,6 @@ const maLong = chart.addLineSeries({ ...lineOpts, color: css('--ma-long') });
 const volume = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', priceLineVisible: false, lastValueVisible: false });
 chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
 
-const cmp = LightweightCharts.createChart($('compare'), { ...baseOptions(), localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: v => (v > 0 ? '+' : '') + v.toFixed(0) + '%' } });
-const cmpMstr = cmp.addLineSeries({ lineWidth: 2, color: css('--fg'), priceLineVisible: false, lastValueVisible: true, title: 'MSTR' });
-const cmpBtc = cmp.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false, lastValueVisible: true, title: 'BTC' });
-
 const sub = LightweightCharts.createChart($('sub'), { ...baseOptions(), rightPriceScale: { borderColor: css('--line'), minimumWidth: 72 }, timeScale: { visible: false }, layout: { ...baseOptions().layout, attributionLogo: false } });
 const subOpts = { priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false };
 const subHist = sub.addHistogramSeries({ ...subOpts, lastValueVisible: false });
@@ -585,7 +626,6 @@ function bounds() {
   return { from: from.toISOString().slice(0, 10), to: last };
 }
 function legendFor() {
-  if (S.view === 'compare') return `<span><i style="background:var(--fg)"></i>MSTR</span><span><i style="background:var(--btc)"></i>比特币</span>`;
   const v = VIEWS[S.view];
   const unit = S.view === 'week' ? '周' : '天';
   return `<span><i style="background:var(--ma-short)"></i>${v.short} ${unit}平均价</span><span><i style="background:var(--ma-long)"></i>${v.long} ${unit}平均价</span><span>红：收盘高于开盘</span>`;
@@ -597,11 +637,7 @@ $('themeToggle').addEventListener('click', () => { try { localStorage.setItem('t
 function draw(force) {
   if (!S.mstr) return;
   $('legend').innerHTML = legendFor();
-  const compare = S.view === 'compare';
-  // 隐藏的图表保留尺寸，切换时才能正常绘制
-  $('chart').classList.toggle('off', compare); $('compare').classList.toggle('off', !compare);
-  $('ohlc').hidden = compare; $('cmpNote').hidden = !compare; $('chips').hidden = compare; $('sub').hidden = compare || S.sub === 'off'; $('subNote').hidden = compare || S.sub === 'off';
-  if (compare) return drawCompare();
+  $('sub').hidden = S.sub === 'off'; $('subNote').hidden = S.sub === 'off';
   const bars = currentBars(), last = bars.at(-1), key = [S.view, bars.length, last.close, last.volume].join();
   if (key !== S.drawnKey) {
     const v = VIEWS[S.view], closes = bars.map(b => b.close);
@@ -630,7 +666,7 @@ function drawSub(bars) {
 }
 function applySub() {
   const isMacd = S.sub === 'macd', off = S.sub === 'off';
-  $('sub').hidden = off || S.view === 'compare'; $('subNote').hidden = off || S.view === 'compare';
+  $('sub').hidden = off; $('subNote').hidden = off;
   $('subNote').textContent = isMacd
     ? 'MACD 看短期和中期动能的差距：白线在橙线上方，说明短期动能强于中期；红绿柱是两者的差。它是滞后的，也会反复交叉。'
     : 'RSI 看近期涨跌力量，0 到 100，虚线是常用参考线 70 和 30。周 K 下显示的是周线 RSI。';
@@ -650,24 +686,13 @@ function drawOverlays(bars) {
   }
   candles.setMarkers(marks.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
 }
-$('chips').addEventListener('change', () => { if (S.mstr && S.view !== 'compare') drawOverlays(currentBars()); });
+$('chips').addEventListener('change', () => { if (S.mstr) drawOverlays(currentBars()); });
 $('subs').addEventListener('click', e => {
   const mode = e.target.dataset.sub; if (!mode) return;
   S.sub = mode;
   document.querySelectorAll('#subs button').forEach(b => b.classList.toggle('on', b === e.target));
   applySub();
 });
-function drawCompare() {
-  const { from, to } = bounds(), btcAt = new Map(S.btc.bars.map(b => [b.time, b.close]));
-  const bars = S.mstr.bars.filter(b => b.time >= from && btcAt.has(b.time));
-  if (bars.length < 2) return;
-  const m0 = bars[0].close, b0 = btcAt.get(bars[0].time);
-  cmpMstr.setData(bars.map(b => ({ time: b.time, value: (b.close / m0 - 1) * 100 })));
-  cmpBtc.setData(bars.map(b => ({ time: b.time, value: (btcAt.get(b.time) / b0 - 1) * 100 })));
-  cmp.timeScale().setVisibleRange({ from: bars[0].time, to });
-  const lastBar = bars.at(-1), mChg = (lastBar.close / m0 - 1) * 100, bChg = (btcAt.get(lastBar.time) / b0 - 1) * 100;
-  $('cmpNote').textContent = `从 ${bars[0].time} 算起（两者都从 0% 出发）：MSTR ${pct(mChg)}，比特币 ${pct(bChg)}。`;
-}
 function showOhlc(b) {
   const prev = S.prevCloses.get(b.time), chg = (b.close / prev - 1) * 100;
   const week = S.view === 'week', span = week ? '这一周' : '这一天', prevName = week ? '上一周' : '前一天';
@@ -800,7 +825,7 @@ function renderQuestions(d) {
   $('qBtcT').textContent = corr;
   const k = S.kpi?.btc;
   $('qBtcS').textContent = k ? `比历史最高价 ${money(k.ath)} 低 ${Math.abs(k.drawdownFromAth).toFixed(1)}%。` : '';
-  renderMood(); renderDca(); renderHistory(); renderPerShare(); renderEvents();
+  renderMood(); renderDca(); renderHistory(); renderPerShare(); renderEvents(); renderMag(); renderQdii();
 
   $('sentence').textContent = `现价在一年区间的${d.pos}（${d.place.toFixed(0)} 分），${both ? '高于' : none ? '低于' : '介于'}两条平均线，近期${fw}，${d.volWord}，和比特币${d.c >= 0.6 ? '走势很同步' : d.c >= 0.3 ? '有一定同步' : '不太同步'}。`;
   renderCompany();
@@ -928,6 +953,99 @@ function renderPerShare() {
   $('psFacts').innerHTML = row('最高', `${n(h.peak.perShare)}（${dateCn(h.peak.date)}）`) + row(`${dateCn(h.first.date)} 时`, n(h.first.perShare)) + row('那之后每股含币量', sign(h.perShareChange)) + row('那之后公司持币', sign(h.btcChange)) + row('那之后股数', `${sign(h.sharesChange)}（${m(h.first.shares)} → ${m(h.now.shares)}）`);
   const key = h.asc.length + ':' + h.now.date;
   if (key !== psKey) { psLine.setData(h.asc.map(x => ({ time: x.date, value: x.perShare }))); psChart.timeScale().fitContent(); psKey = key; }
+}
+
+// --- Magnificent Seven comparison ---
+const MAG7 = [['AAPL', '苹果', '#8e8e93'], ['MSFT', '微软', '#0a84ff'], ['GOOGL', '谷歌', '#34a853'], ['AMZN', '亚马逊', '#ff9500'], ['NVDA', '英伟达', '#76b900'], ['META', 'Meta', '#5e5ce6'], ['TSLA', '特斯拉', '#e31937']];
+const MAG_EXTRA = [['MSTR', '微策略', css('--fg')], ['BMNR', 'BitMine', '#00a3a3'], ['QQQ', '纳指 100', css('--ma-long')], ['^GSPC', '标普 500', '#16a085']];
+const MAG_BTC = ['BTC', '比特币', css('--btc')];
+const MAG_CN = [['000001.SS', '上证指数', '#c0392b'], ['510300.SS', '沪深 300', '#2c3e50']];
+const MAG_LEAD = [['TSM', '台积电', '#b7791f'], ['AVGO', '博通', '#8e44ad'], ['MU', '美光', '#c0392b'], ['PLTR', 'Palantir', '#7f8c8d'], ['SPCX', 'SpaceX', '#1f2d3d'], ['COIN', 'Coinbase', '#2c6bed'],
+  ['LLY', '礼来', '#d35400'], ['JPM', '摩根大通', '#2e86c1'], ['BRK-B', '伯克希尔', '#6c3483'], ['WMT', '沃尔玛', '#0e9f9a'], ['MCD', '麦当劳', '#e6a700'], ['KO', '可口可乐', '#e41e26'], ['XOM', '埃克森美孚', '#a04000']];
+const MAG_ALL = [...MAG7, ...MAG_LEAD, ...MAG_EXTRA, MAG_BTC, ...MAG_CN];
+const MAG_BOLD = new Set(['MSTR', 'BMNR']);
+const MAG_LOAD = [...MAG7, ...MAG_LEAD, ...MAG_CN].map(x => x[0]).concat('BMNR', '^GSPC');
+const magChart = LightweightCharts.createChart($('magChart'), { ...baseOptions(), layout: { ...baseOptions().layout, attributionLogo: false }, rightPriceScale: { borderColor: css('--line'), minimumWidth: 72 }, localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: v => (v > 0 ? '+' : '') + v.toFixed(0) + '%' } });
+const magSeries = Object.fromEntries(MAG_ALL.map(([sym, name, color]) => [sym, magChart.addLineSeries({ lineWidth: MAG_BOLD.has(sym) ? 3 : 2, color, priceLineVisible: false, lastValueVisible: false })]));
+const MAG = { months: 12, key: null, shown: new Set(store.get('magShown2', [...MAG7, ...MAG_EXTRA, MAG_BTC].map(x => x[0]))) }; // 行业龙头默认不显示
+if (!store.get('magSpx')) { MAG.shown.add('^GSPC'); store.set('magSpx', true); store.set('magShown2', [...MAG.shown]); } // 后来加的标普 500 也默认显示
+const magPick = ([sym, name, color]) => `<label><input type="checkbox" data-sym="${sym}" ${MAG.shown.has(sym) ? 'checked' : ''}><i style="background:${color}"></i>${name}</label>`;
+$('magPicks').innerHTML = [['七姐妹', MAG7], ['各行业龙头', MAG_LEAD], ['我的持仓', MAG_EXTRA], ['其他参考', [MAG_BTC, ...MAG_CN]]].map(([title, list]) => `<div class="mag-row"><b>${title}</b><div class="mag-list">${list.map(magPick).join('')}</div></div>`).join('');
+$('magPicks').addEventListener('change', e => {
+  const sym = e.target.dataset.sym; if (!sym) return;
+  e.target.checked ? MAG.shown.add(sym) : MAG.shown.delete(sym);
+  store.set('magShown2', [...MAG.shown]); renderMag();
+});
+$('magRange').addEventListener('click', e => {
+  const m = Number(e.target.dataset.m); if (!m) return;
+  MAG.months = m;
+  $('magRange').querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.target));
+  renderMag();
+});
+async function loadMag() {
+  if (S.magAt && Date.now() - S.magAt < 600000) return;
+  S.mag = S.mag || {};
+  const got = await Promise.allSettled(MAG_LOAD.map(sym => getJson('/api/chart?symbol=' + encodeURIComponent(sym))));
+  got.forEach((g, i) => { if (g.status === 'fulfilled') S.mag[MAG_LOAD[i]] = parseDaily(g.value); });
+  S.magFailed = got.filter(g => g.status !== 'fulfilled').length;
+  S.magAt = Date.now();
+}
+function renderMag() {
+  if (!S.mag || !S.mstr) return;
+  const last = S.mstr.bars.at(-1).time, start = new Date(last + 'T00:00:00Z');
+  start.setUTCMonth(start.getUTCMonth() - MAG.months);
+  const from = start.toISOString().slice(0, 10), lines = {};
+  for (const sym of MAG_LOAD) if (S.mag[sym]) lines[sym] = rebaseSeries(S.mag[sym].bars, from);
+  lines.MSTR = rebaseSeries(S.mstr.bars, from);
+  if (S.btc) lines.BTC = rebaseSeries(S.btc.bars, from);
+  if (S.qqq) lines.QQQ = rebaseSeries(S.qqq.bars, from);
+  for (const [sym, series] of Object.entries(magSeries)) series.setData(MAG.shown.has(sym) && lines[sym] ? lines[sym].points : []);
+  const key = MAG.months + ':' + last;
+  if (key !== MAG.key) { magChart.timeScale().fitContent(); MAG.key = key; }
+  const names = Object.fromEntries(MAG_ALL.map(([s, n]) => [s, n]));
+  const rows = Object.entries(lines).filter(([sym, l]) => l && MAG.shown.has(sym)).sort((a, b) => b[1].change - a[1].change);
+  const codes = { '^GSPC': 'SPX', '000001.SS': '000001', '510300.SS': '510300' };
+  $('magTable').innerHTML = '<tr><th>名称</th><th>涨跌</th></tr>' + rows.map(([sym, l]) => {
+    const name = MAG_BOLD.has(sym) ? `<b>${names[sym]}</b>` : names[sym];
+    return `<tr><td>${name} <span class="note">${codes[sym] || sym}</span></td><td class="${dirClass(l.change)}">${pct(l.change)}</td></tr>`;
+  }).join('');
+  $('magNote').textContent = (S.magFailed ? `有 ${S.magFailed} 只暂时取不到，稍后会自动重试。` : '');
+}
+
+// --- Nasdaq-100 and S&P 500 QDII funds ---
+let qdiiFilter = store.get('qdiiFilter', 'open');
+$('qdiiFilter').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.f === qdiiFilter));
+$('qdiiFilter').addEventListener('click', e => {
+  const f = e.target.dataset.f; if (!f) return;
+  qdiiFilter = f; store.set('qdiiFilter', f);
+  $('qdiiFilter').querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.target));
+  renderQdii();
+});
+let qdiiClass = store.get('qdiiClass', 'A');
+$('qdiiClass').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.c === qdiiClass));
+$('qdiiClass').addEventListener('click', e => {
+  const c = e.target.dataset.c; if (!c) return;
+  qdiiClass = c; store.set('qdiiClass', c);
+  $('qdiiClass').querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.target));
+  renderQdii();
+});
+async function loadQdii() {
+  if (S.qdiiAt && Date.now() - S.qdiiAt < 600000) return;
+  try { S.qdii = await getJson('/api/qdii'); S.qdiiFail = false; } catch { S.qdiiFail = true; }
+  S.qdiiAt = Date.now();
+}
+function renderQdii() {
+  if (!S.qdii) { if (S.qdiiFail) $('qdiiSay').textContent = '暂时取不到基金数据，稍后会自动重试。'; return; }
+  const all = S.qdii.rows.map(r => ({ ...r, st: qdiiStatus(r) })).filter(r => qdiiClass === 'all' || r.share_class === qdiiClass);
+  const className = qdiiClass === 'all' ? '' : ` ${qdiiClass} 类`;
+  const open = all.filter(r => r.st.open), big = open.filter(r => r.st.limit >= 1000);
+  const count = idx => all.filter(r => r.index === idx).length;
+  $('qdiiSay').innerHTML = `纳指 100 和标普 500 场外基金${className}共 ${all.length} 只（纳指 100 ${count('纳指 100')} 只，标普 500 ${count('标普 500')} 只），<b>现在能买 ${open.length} 只</b>，其中每天能买 1,000 元以上的 ${big.length} 只。`;
+  const list = (qdiiFilter === 'open' ? open : all).sort((a, b) => (b.st.limit - a.st.limit) || a.name.localeCompare(b.name, 'zh'));
+  const since = r => r.since ? dateCn(r.since) : r.st.open ? `${dateCn(r.seen)} 开始记录前就已开放` : '';
+  $('qdiiTable').innerHTML = '<tr><th>基金</th><th>跟踪</th><th>现在</th><th>从哪天开始</th></tr>' + list.map(r => `<tr><td>${escapeHtml(r.name)} <a href="${escapeHtml(r.source_url)}" target="_blank" rel="noopener" class="note">${escapeHtml(r.code)}</a></td><td>${r.index}</td><td class="${r.st.open ? 'open' : 'shut'}">${r.st.label}</td><td>${since(r)}</td></tr>`).join('');
+  const t = S.qdii.stored_at ? new Date(S.qdii.stored_at * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '';
+  $('qdiiNote').textContent = `数据由开源项目 GlobalAssetHistory 整理自东方财富${t ? `，更新于 ${t}` : ''}。公开数据里没有官方开放日期，“从哪天开始”是本工具从 ${dateCn(S.qdii.tracked_from)} 起自己记录的状态变化（标普 500 基金是后来加的，从第一次看到时算起），所以这之前的开放日期请点基金代码查看公告。买之前请在支付宝里确认当天的额度，额度经常变化。`;
 }
 
 // --- Earnings dates and holdings changes ---
@@ -1155,6 +1273,8 @@ const TERMS = {
   vola: '这是把最近每天涨跌的幅度取平均。数字越大，账面上下越剧烈。MSTR 的波动通常比普通股票和比特币都大，持有前要想清楚自己能不能接受。',
   fear: '恐慌指标衡量的是大家的情绪。比特币情绪指数看币圈，0 最恐惧，100 最贪婪，数字由 Strategy 官网提供。VIX 看美股未来一个月的预期波动，大跌时往往飙升。恐慌时不一定是底部，恐慌可能持续很久甚至加深，所以它只能说明气氛，不能预测涨跌。',
   pershare: '公司持有的比特币除以股数，就是每一股对应多少比特币。公司买币会让它上升，增发股票会让它下降。所以只看“公司持币越来越多”不够，要看每股对应的有没有变多。如果增发时股价有足够溢价，增发后每股含币量也可能上升；下降也不一定代表公司变差，比如筹到的钱可能用在别处。这里没有扣除债务，所以不是净值。',
+  qdii: 'A 类通常买入时收申购费，适合长期持有；C 类不收申购费，但按天收销售服务费，适合短期持有。同一只基金的 A 类和 C 类投资的东西一样，只是收费方式不同，开放和限额也可能不一样。场外 QDII 基金是国内基金公司发行、投资海外市场的基金，可以在支付宝等平台买，不用开美股账户。因为换汇额度有限，基金公司经常暂停申购或限制每天能买的金额，所以“能不能买、能买多少”会经常变化。同一只基金的 A 类和 C 类费用收取方式不同。这里只显示状态，不比较哪只更好。',
+  mag7: '“美股七姐妹”通常指苹果、微软、谷歌母公司 Alphabet、亚马逊、英伟达、Meta 和特斯拉这七家大型科技公司，它们在纳斯达克和标普 500 里占比很高。“各行业龙头”里，台积电（芯片代工）、博通（网络和定制芯片）、美光（存储芯片）、Palantir（数据软件）、SpaceX（火箭和卫星互联网，2026 年 6 月才上市）、Coinbase（加密货币交易所）偏科技；礼来（医药）、摩根大通（银行）、伯克希尔（保险和投资）、沃尔玛（零售）、麦当劳（餐饮）、可口可乐（饮料）和埃克森美孚（能源）可以看看科技以外的行业表现。纳指 100 用 QQQ 代表，标普 500 是美国 500 家大公司组成的指数。上证指数包括上海交易所的全部股票，沪深 300 是沪深两市 300 家大公司，这里用跟踪它的 ETF 代表。纳指 100 用 QQQ 代表整个纳斯达克 100。BitMine（BMNR）是一家以持有以太坊为主的上市公司，和微策略持有比特币的模式类似。这里只比较涨跌幅，不代表公司好坏。',
   cost: '200 周平均价是比特币过去约 4 年的平均价，常被当作长期趋势线。全网平均持币成本（realized price）是所有比特币最后一次转移时价格的平均值，可以粗略理解为大家的平均成本。价格曾跌破过这两条线，它们不是不会被跌破的底部。',
   dca: '定投就是不管涨跌，每月投固定金额。价格低时买到的多，价格高时买到的少。定投均价是总投入除以买到的数量，也就是你平均花多少钱买到一股或一枚。这里只是用历史价格算账。定投能摊平买入价格，但不能保证赚钱，标的长期下跌时一样会亏。',
   rsi: '衡量最近 14 根 K 线上涨和下跌的相对力度，范围 0 到 100。日线看 14 天，周线看 14 周。常用 70 和 30 作为参考线，强势股可能长期停在高位，不能单独用来判断买卖。',
@@ -1323,7 +1443,7 @@ function renderSources() {
 }
 
 // --- Top navigation ---
-const NAV = [['总览', '.qs'], ['K 线', '.main'], ['mNAV', '#mnavChart'], ['每股含币', '#psChart'], ['财报和买卖', '#earnTable'], ['定投', '#dcaChart'], ['技术信号', '#reviewBox'], ['提醒和持仓', '.bottom'], ['交易计划', '#planWhy'], ['数据来源', '#sourceBox']];
+const NAV = [['总览', '.qs'], ['K 线', '.main'], ['mNAV', '#mnavChart'], ['每股含币', '#psChart'], ['走势对比', '#magChart'], ['场外基金', '#qdiiTable'], ['财报和买卖', '#earnTable'], ['定投', '#dcaChart'], ['技术信号', '#reviewBox'], ['提醒和持仓', '.bottom'], ['交易计划', '#planWhy'], ['数据来源', '#sourceBox']];
 function buildNav() {
   const spots = NAV.map(([name, sel]) => {
     const el = document.querySelector(sel), box = el && (el.closest('.qs, .main, .bottom, .two, section') || el);
@@ -1332,6 +1452,7 @@ function buildNav() {
   $('topNav').replaceChildren(...spots.map(s => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = s.name;
     b.onclick = () => {
+      unfoldBox(s.box);
       s.box.querySelector('details.fold')?.setAttribute('open', '');
       window.scrollTo({ top: s === spots[0] ? 0 : s.box.getBoundingClientRect().top + scrollY - $('topNav').offsetHeight - 8, behavior: 'auto' });
       mark();
@@ -1345,7 +1466,55 @@ function buildNav() {
   };
   addEventListener('scroll', mark, { passive: true }); mark();
 }
-addEventListener('load', buildNav);
+// 每个版块都能收起；状态记在本机浏览器。总览的问题卡片不收起
+const GROUP_TITLES = { main: 'K 线', two: '财报和买卖记录', bottom: '提醒、持仓和公司持币' };
+function refreshCharts(box) {
+  requestAnimationFrame(() => {
+    if (box.querySelector('#chart')) draw(true);
+    for (const c of [mnavChart, psChart, magChart, dcaChart]) if (box.contains(c.chartElement())) c.timeScale().fitContent();
+  });
+}
+function setFold(box, folded) {
+  box.classList.toggle('folded', folded);
+  const btn = box.foldButton;
+  btn.textContent = folded ? '展开' : '收起';
+  btn.setAttribute('aria-expanded', String(!folded));
+  const saved = store.get('folds', {}); saved[box.foldKey] = folded; store.set('folds', saved);
+  if (!folded) refreshCharts(box);
+}
+function unfoldBox(box) {
+  for (let el = box; el; el = el.parentElement) if (el.foldButton && el.classList.contains('folded')) setFold(el, false);
+  const group = box.closest('.fold-group'); if (group?.classList.contains('folded')) setFold(group, false);
+}
+function setupFolds() {
+  const saved = store.get('folds', {});
+  for (const box of document.querySelectorAll('.wrap > .main, .wrap > .two, .wrap > .bottom, .wrap > section.panel')) {
+    if (box.querySelector(':scope > details.fold')) continue; // 技术信号和数据来源本来就能折叠
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'fold-btn';
+    if (box.matches('section.panel')) {
+      const head = box.firstElementChild;
+      box.foldKey = (head.querySelector('h2')?.textContent || box.id || 'panel').trim();
+      head.style.display = 'flex'; head.style.flexWrap = 'wrap'; head.style.alignItems = 'center';
+      head.append(btn);
+    } else {
+      const kind = ['main', 'two', 'bottom'].find(k => box.classList.contains(k));
+      box.foldKey = GROUP_TITLES[kind]; box.classList.add('fold-group');
+      const bar = document.createElement('div'); bar.className = 'fold-bar';
+      const label = document.createElement('b'); label.textContent = GROUP_TITLES[kind];
+      const top = document.createElement('button'); top.type = 'button'; top.className = 'fold-btn'; top.textContent = '收起';
+      top.onclick = () => setFold(box, true);
+      bar.append(label, btn); box.before(bar);
+      // 展开时标题条隐藏，所以在版块里放一个“收起”
+      const anchor = box.querySelector('.toolbar, .panel > h2, .panel > .head, .panel h2');
+      if (anchor) { top.style.marginLeft = 'auto'; anchor.append(top); }
+    }
+    box.foldButton = btn;
+    btn.onclick = () => setFold(box, !box.classList.contains('folded'));
+    setFold(box, !!saved[box.foldKey]);
+  }
+}
+addEventListener('load', () => { buildNav(); setupFolds(); });
 
 // --- Refresh loop ---
 async function refresh() {
@@ -1362,10 +1531,12 @@ async function refresh() {
     const showAll = () => { renderBand(); renderHeader(); draw(false); renderReadout(); renderStatus(); renderSources(); checkAlerts(); checkPlan(); renderPlan(); window.renderExtras?.(); };
     showAll();
     // 官网数据和行情分开取：官网取不到时，其他功能照常
-    const [km, kb, vx, hs, er] = await Promise.allSettled([getJson('/api/strategy/mstr'), getJson('/api/strategy/btc'), getJson('/api/chart?symbol=' + encodeURIComponent('^VIX')), getJson('/api/strategy/history'), getJson('/api/earnings')]);
+    const [km, kb, vx, hs, er, qq] = await Promise.allSettled([getJson('/api/strategy/mstr'), getJson('/api/strategy/btc'), getJson('/api/chart?symbol=' + encodeURIComponent('^VIX')), getJson('/api/strategy/history'), getJson('/api/earnings'), getJson('/api/chart?symbol=QQQ')]);
     S.tried = true;
     S.health.vix = vx.status === 'fulfilled'; S.health.history = hs.status === 'fulfilled'; S.health.earn = er.status === 'fulfilled'; S.health.kpi = km.status === 'fulfilled' && kb.status === 'fulfilled';
     if (hs.status === 'fulfilled') S.history = hs.value;
+    if (qq.status === 'fulfilled') S.qqq = parseDaily(qq.value);
+    await loadMag(); await loadQdii();
     if (er.status === 'fulfilled') S.earn = er.value.map(e => { const [mo, d, y] = e.dateReported.split('/'); return { ...e, date: `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}` }; });
     if (vx.status === 'fulfilled') S.vix = parseDaily(vx.value);
     S.kpi = { tried: true, mstr: km.status === 'fulfilled' ? km.value[0] : S.kpi?.mstr, btc: kb.status === 'fulfilled' ? kb.value.results : S.kpi?.btc };

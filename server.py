@@ -12,7 +12,12 @@ from urllib.parse import parse_qs, urlparse
 HOST = "127.0.0.1"
 PORT = 8765
 ROOT = Path(__file__).resolve().parent
-SYMBOLS = {"MSTR": "MSTR", "BTC-USD": "BTC-USD", "^VIX": "%5EVIX"}
+SYMBOLS = {"MSTR": "MSTR", "BTC-USD": "BTC-USD", "^VIX": "%5EVIX", "QQQ": "QQQ",
+           "AAPL": "AAPL", "MSFT": "MSFT", "GOOGL": "GOOGL", "AMZN": "AMZN", "NVDA": "NVDA", "META": "META", "TSLA": "TSLA",
+           "BMNR": "BMNR",
+           "MU": "MU", "TSM": "TSM", "AVGO": "AVGO", "PLTR": "PLTR", "COIN": "COIN", "SPCX": "SPCX",
+           "LLY": "LLY", "JPM": "JPM", "BRK-B": "BRK-B", "WMT": "WMT", "MCD": "MCD", "KO": "KO", "XOM": "XOM",
+           "^GSPC": "%5EGSPC", "000001.SS": "000001.SS", "510300.SS": "510300.SS"}
 CACHE_SECONDS = 30
 STRATEGY_CACHE_SECONDS = 120
 STRATEGY_PATHS = {"/api/strategy/mstr": "mstrKpiData", "/api/strategy/btc": "bitcoinKpis"}
@@ -80,11 +85,12 @@ def cached_json(url, ttl, transform=None, headers=()):
         hit = _cache.get(url)
         if hit and time.time() - hit[0] < ttl:
             return hit[1]
-    args = ["/usr/bin/curl", "-fsS", "--compressed", "-m", "40", "-A", UA]
+    # 官网历史数据有 13MB，刚启动时和其他请求挤在一起，需要多等一会儿
+    args = ["/usr/bin/curl", "-fsS", "--compressed", "-m", "90", "--retry", "1", "-A", UA]
     for header in headers:
         args += ["-H", header]
     try:
-        out = subprocess.run(args + [url], capture_output=True, timeout=60, check=True).stdout
+        out = subprocess.run(args + [url], capture_output=True, timeout=200, check=True).stdout
         data = json.loads(out)
         out = json.dumps(transform(data) if transform else data).encode()
     except Exception:
@@ -101,6 +107,43 @@ def history_rows(data):
     rows = next(item["values"] for item in data if item["ticker"] == "MSTR")
     keep = ("mNav", "mNavEntVal", "marketCap", "btcNav", "btcHoldings", "price", "satsPerShare")
     return [{"date": row["date"][:10], **{k: row.get(k) for k in keep}} for row in rows]
+
+
+QDII_URL = "https://qqq.tools24.uk/api/etf-market/qdii-funds"
+QDII_STATUS_FILE = ROOT / "data" / "qdii-status.json"
+QDII_GROUPS = {"nasdaq100": "纳指 100", "sp500": "标普 500"}
+QDII_KEEP = ("code", "name", "company", "share_class", "purchase_status", "buyable", "daily_limit", "min_purchase", "discounted_rate", "source_url")
+
+
+def qdii_rows(data, status_file=None, today=None):
+    """只留纳指 100 和标普 500 基金，并在申购状态变化时记下日期。
+
+    公开数据里没有“从哪天开始开放”，所以由本程序自己记录：第一次看到某只基金时
+    不知道它之前的状态，since 记为 None，seen 记下第一次看到的日期；之后状态一变，就记下变化当天的日期。
+    """
+    path = Path(status_file or QDII_STATUS_FILE)
+    today = today or time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        saved = {}
+    tracked_from = saved.get("tracked_from") or today
+    funds = saved.get("funds", {})
+    rows = []
+    for group, index in QDII_GROUPS.items():
+        for item in data["groups"].get(group, []):
+            row = {k: item.get(k) for k in QDII_KEEP}
+            code, status = row["code"], row["purchase_status"] or ""
+            old = funds.get(code)
+            if old is None:
+                funds[code] = {"status": status, "since": None, "seen": today}
+            elif old["status"] != status:
+                funds[code] = {**old, "status": status, "since": today}
+            row.update(index=index, since=funds[code]["since"], seen=funds[code].get("seen") or tracked_from)
+            rows.append(row)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"tracked_from": tracked_from, "funds": funds}, ensure_ascii=False, indent=1), encoding="utf-8")
+    return {"tracked_from": tracked_from, "stored_at": data.get("stored_at_epoch"), "rows": rows}
 
 
 def earnings_rows(data):
@@ -155,6 +198,11 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/strategy/history":
             try:
                 return self.send_body(200, cached_json("https://api.strategy.com/btc/timeSeries", 1800, history_rows))
+            except Exception:
+                return self.send_body(502, b'{"error":"upstream"}')
+        if parsed.path == "/api/qdii":
+            try:
+                return self.send_body(200, cached_json(QDII_URL, 1800, qdii_rows))
             except Exception:
                 return self.send_body(502, b'{"error":"upstream"}')
         if parsed.path == "/api/earnings":
