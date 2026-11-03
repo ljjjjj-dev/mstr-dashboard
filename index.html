@@ -13,10 +13,11 @@
   --fg: #17212b; --muted: #55646f; --faint: #85929c;
   --up: #d63c30; --down: #0c8f62; --btc: #d9770b;
   --ma-short: #b98a00; --ma-long: #2f6fd1; --cost: #17212b; --warn: #a86a00; --glow: rgba(217,119,11,.09);
-  --serif: "New York", ui-serif, "Songti SC", serif;
-  --song: "Songti SC", "STSong", serif;
-  --sans: -apple-system, "PingFang SC", "Hiragino Sans GB", sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  /* 全部使用系统字体（苹方 / SF），数字用等宽数字对齐，不混用衬线、宋体和代码字体 */
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", sans-serif;
+  --serif: var(--sans);
+  --song: var(--sans);
+  --mono: var(--sans);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -28,7 +29,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 .off { visibility: hidden; position: absolute; inset: 0; }
-body { margin: 0; color: var(--fg); font: 14px/1.6 var(--sans); background: var(--ink);
+body { margin: 0; color: var(--fg); font: 14px/1.6 var(--sans); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; background: var(--ink);
   background-image: radial-gradient(900px 420px at 88% -120px, var(--glow), transparent 70%); background-attachment: fixed; }
 .wrap { max-width: 1320px; margin: 0 auto; padding-block: 24px 40px; padding-inline: max(16px, 2.4vw); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 button { font: inherit; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
@@ -43,10 +44,10 @@ a { color: var(--btc); }
 /* Hero */
 .hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 26px; }
 .who { display: grid; }
-.who b { font: 700 19px/1.2 var(--serif); letter-spacing: .08em; }
+.who b { font: 600 18px/1.2 var(--sans); }
 .who span { font-size: 12px; color: var(--muted); }
 .quote { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
-#price { font: 500 clamp(44px, 6vw, 64px)/1 var(--serif); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; border-radius: 6px; }
+#price { font: 600 clamp(40px, 5.4vw, 56px)/1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; border-radius: 6px; }
 #change { font: 500 17px var(--mono); }
 #priceLabel { font-size: 12px; color: var(--muted); }
 .flash { animation: flash .9s ease-out; }
@@ -76,11 +77,11 @@ a { color: var(--btc); }
 .band-labels span:first-child { transform: none; } .band-labels span:last-child { transform: translateX(-100%); }
 @media (max-width: 560px) { .band-labels em { display: none; } }
 .band-labels em { font-style: normal; }
-#sentence { margin: 0; font: 500 16px/1.6 var(--song); color: var(--fg); text-wrap: pretty; }
+#sentence { margin: 0; font: 400 15px/1.6 var(--sans); color: var(--fg); text-wrap: pretty; }
 
 /* Panels */
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
-h2 { font: 700 15px/1.3 var(--song); letter-spacing: .04em; margin: 0; }
+h2 { font: 600 15px/1.3 var(--sans); margin: 0; }
 .main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; }
 .bottom { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 @media (max-width: 1040px) { .main { grid-template-columns: minmax(0, 1fr); } .bottom { grid-template-columns: minmax(0, 1fr); } .hero-right { margin-left: 0; justify-items: start; } #updated { text-align: left; } }
