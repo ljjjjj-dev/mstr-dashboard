@@ -220,6 +220,68 @@ li { display: flex; justify-content: space-between; align-items: center; gap: 8p
 #bannerText { min-width: 0; overflow-wrap: anywhere; }
 #banner[hidden] { display: none; }
 footer { font-size: 12px; color: var(--faint); }
+
+/* 小清新配色：天蓝底色、圆角卡片、每张问题卡片各有一种浅色调。颜色只在这里改，图表会跟着变量走 */
+:root {
+  --ink: #eaf4fb; --panel: #ffffff; --panel-2: #eff6fc; --line: #dbe8f2; --grid: rgba(110,150,190,.16);
+  --fg: #1d3557; --muted: #587089; --faint: #93a6b8;
+  --up: #f0564a; --down: #19a974; --btc: #f59e2b;
+  --ma-short: #f2b705; --ma-mid: #a77bdb; --ma-long: #3d8bf2; --cost: #1d3557; --warn: #e08a00; --glow: rgba(120,190,240,.35);
+  --sky: #3d8bf2; --shadow: 0 6px 22px rgba(61,110,160,.09);
+}
+:root[data-theme="dark"] {
+  --ink: #0d1726; --panel: #142235; --panel-2: #1a2b42; --line: #26384f; --grid: rgba(60,85,115,.45);
+  --fg: #e8f0f8; --muted: #9db2c8; --faint: #627a93;
+  --up: #ff6f61; --down: #34d399; --btc: #fbae4b;
+  --ma-short: #f7d36b; --ma-mid: #c4a3f0; --ma-long: #7cb4ff; --cost: #f2f6fa; --warn: #f7c25a; --glow: rgba(90,150,230,.16);
+  --sky: #7cb4ff; --shadow: 0 6px 22px rgba(0,0,0,.25);
+}
+body { background-color: var(--ink);
+  background-image: radial-gradient(700px 320px at 12% -60px, var(--glow), transparent 70%), radial-gradient(800px 380px at 92% -80px, color-mix(in srgb, var(--down) 14%, transparent), transparent 70%); }
+.panel, .fold-bar { border-radius: 18px; border-color: color-mix(in srgb, var(--line) 70%, transparent); box-shadow: var(--shadow); }
+button { border-radius: 99px; }
+button.on { color: #fff; background: var(--sky); border-color: var(--sky); }
+button:hover { border-color: var(--sky); color: var(--sky); }
+input, select, #planWhy { border-radius: 10px; }
+#topNav { background: color-mix(in srgb, var(--panel) 82%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+#topNav button.on { color: var(--sky); background: color-mix(in srgb, var(--sky) 12%, var(--panel)); }
+
+/* 顶部价格区做成一张浅色卡片 */
+.hero { padding: 18px 22px; border-radius: 20px; background: linear-gradient(120deg, color-mix(in srgb, var(--sky) 14%, var(--panel)), color-mix(in srgb, var(--down) 10%, var(--panel))); box-shadow: var(--shadow); }
+.who b { font-size: 22px; font-weight: 800; color: var(--fg); }
+#price { font-weight: 800; color: var(--fg); }
+#ext { border-radius: 99px; background: color-mix(in srgb, var(--panel) 70%, transparent); }
+.tracks { height: 10px; border-radius: 99px; }
+.seg-pre, .seg-post { background: color-mix(in srgb, var(--btc) 45%, transparent); } .seg-reg { background: color-mix(in srgb, var(--down) 55%, transparent); }
+#sentence { padding: 10px 16px; border-radius: 14px; background: color-mix(in srgb, var(--panel) 75%, transparent); }
+
+/* 标题做成浅色胶囊 */
+.panel h2, .fold > summary, .fold-bar b { display: inline-block; padding: 3px 14px; border-radius: 99px; background: color-mix(in srgb, var(--sky) 13%, var(--panel)); color: var(--fg) !important; }
+.fold > summary { display: flex; width: fit-content; max-width: 100%; }
+
+/* 八张问题卡片，各配一种颜色 */
+.q-card { --accent: var(--sky); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 13%, var(--panel)), var(--panel) 75%); border-color: color-mix(in srgb, var(--accent) 22%, var(--panel)); }
+.qs > .q-card:nth-child(1) { --accent: #3d8bf2; }
+.qs > .q-card:nth-child(2) { --accent: #19a974; }
+.qs > .q-card:nth-child(3) { --accent: #f08a4b; }
+.qs > .q-card:nth-child(4) { --accent: #9b6dd6; }
+.qs > .q-card:nth-child(5) { --accent: #20a4c4; }
+.qs > .q-card:nth-child(6) { --accent: #f59e2b; }
+.qs > .q-card:nth-child(7) { --accent: #ef5d82; }
+.qs > .q-card:nth-child(8) { --accent: #d4a106; }
+.q-card .ask { color: color-mix(in srgb, var(--accent) 55%, var(--fg)) !important; }
+.q-card .v { font-size: 30px; font-weight: 800; color: color-mix(in srgb, var(--accent) 80%, var(--fg)); }
+.q-card .mini { height: 8px; border-radius: 99px; background: linear-gradient(90deg, #7fd8b0, #ffd36e, #ff8f80); }
+.q-card .mini span { border-radius: 99px; background: var(--fg); box-shadow: 0 0 0 2px var(--panel); }
+.q-card .q { border-color: color-mix(in srgb, var(--accent) 40%, var(--panel)); color: var(--accent); }
+
+/* 右侧读数、信号和提示块 */
+.explain, .next, .back { border-radius: 12px; }
+.signals li { border-radius: 12px; border-left-width: 4px; }
+.signals li.bull { background: color-mix(in srgb, var(--up) 8%, var(--panel)); } .signals li.bear { background: color-mix(in srgb, var(--down) 8%, var(--panel)); }
+.caution { border-radius: 12px; background: color-mix(in srgb, var(--warn) 8%, var(--panel)); border-color: color-mix(in srgb, var(--warn) 30%, var(--panel)); }
+.ladder li.here { background: var(--sky); color: #fff; }
+#chip { background: color-mix(in srgb, currentColor 10%, var(--panel)); }
 </style>
 </head>
 <body>
