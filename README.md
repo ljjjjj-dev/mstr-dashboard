@@ -67,13 +67,13 @@ cd mstr-dashboard && sh build-mac-app.sh
 
 ## 工作原理
 
-`server.py` 在你的电脑上开一个只有本机能访问的小服务，替页面去读各个公开接口，再把结果交给网页显示。仓库里不保存、也不分发这些数据。
+`server.py` 在你的电脑上开一个只有本机能访问的小服务，替页面去读各个公开接口（Strategy API 就是 Strategy 官网自己用的数据接口），再把结果交给网页显示。仓库里不保存、也不分发这些数据。
 
 ```
-浏览器页面 ─▶ server.py ─▶ Yahoo Finance        股价、指数、比特币、VIX
-                      ─▶ Strategy 官网接口     mNAV、持币数、市值、历史数据
-                      ─▶ Nasdaq               财报日期
-                      ─▶ GlobalAssetHistory   场外基金申购状态（整理自东方财富）
+页面 ─▶ server.py ─▶ Yahoo Finance        股价、指数、比特币、VIX
+                  ─▶ Strategy API         mNAV、持币数、市值、历史数据
+                  ─▶ Nasdaq               财报日期
+                  ─▶ GlobalAssetHistory   场外基金申购状态（整理自东方财富）
 ```
 
 这些接口没有承诺一直开放，可能会变或失效，使用时请自己确认符合各数据源的条款。某个接口暂时取不到时，页面会继续显示上一次的数据，不会用 0 代替。
