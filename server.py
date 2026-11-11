@@ -31,11 +31,14 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
 _cache = {}
 _lock = threading.Lock()
-_last_request = time.time()
+# 用 monotonic 计时：Mac 睡眠时它不走，醒来后不会误以为页面已经关了很久
+_last_request = time.monotonic()
+# 走势对比一次要取二十多只股票，同时请求太多容易被 Yahoo 限流
+_yahoo_slots = threading.BoundedSemaphore(6)
 
 
 def exit_when_idle():
-    while time.time() - _last_request < IDLE_EXIT_SECONDS:
+    while time.monotonic() - _last_request < IDLE_EXIT_SECONDS:
         time.sleep(15)
     os._exit(0)
 
@@ -46,12 +49,18 @@ def fetch_chart(symbol, query="range=5y&interval=1d"):
         hit = _cache.get(url)
         if hit and time.time() - hit[0] < CACHE_SECONDS:
             return hit[1]
-    # curl 使用系统证书，避免 python.org 版 Python 缺证书的问题
-    out = subprocess.run(
-        ["/usr/bin/curl", "-fsS", "-m", "12", "--retry", "2", "--retry-all-errors", "--retry-delay", "1", "-A", UA, url],
-        capture_output=True, timeout=45, check=True,
-    ).stdout
-    json.loads(out)
+    try:
+        # curl 使用系统证书，避免 python.org 版 Python 缺证书的问题
+        with _yahoo_slots:
+            out = subprocess.run(
+                ["/usr/bin/curl", "-fsS", "-m", "12", "--retry", "2", "--retry-all-errors", "--retry-delay", "1", "-A", UA, url],
+                capture_output=True, timeout=45, check=True,
+            ).stdout
+        json.loads(out)
+    except Exception:
+        if hit:  # Yahoo 偶尔失败或限流时，继续用上一次的数据
+            return hit[1]
+        raise
     with _lock:
         _cache[url] = (time.time(), out)
     return out
@@ -173,8 +182,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def host_ok(self):
         global _last_request
-        _last_request = time.time()
-        return self.headers.get("Host") in {f"{HOST}:{PORT}", f"localhost:{PORT}"}
+        ok = self.headers.get("Host") in {f"{HOST}:{PORT}", f"localhost:{PORT}"}
+        if ok:
+            _last_request = time.monotonic()
+        return ok
 
     def do_GET(self):
         if not self.host_ok():

@@ -66,6 +66,24 @@ class QdiiTracking(unittest.TestCase):
         self.assertIsNone(rows[0]["since"])
 
 
+class Fallbacks(unittest.TestCase):
+    def test_chart_keeps_last_data_when_yahoo_fails(self):
+        from unittest import mock
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/MSTR?range=5y&interval=1d"
+        server._cache[url] = (0, b'{"old": 1}')  # 已过期的旧数据
+        try:
+            with mock.patch.object(server.subprocess, "run", side_effect=server.subprocess.CalledProcessError(22, "curl")):
+                self.assertEqual(server.fetch_chart("MSTR"), b'{"old": 1}')
+        finally:
+            server._cache.pop(url, None)
+
+    def test_chart_fails_when_there_is_nothing_to_fall_back_on(self):
+        from unittest import mock
+        with mock.patch.object(server.subprocess, "run", side_effect=server.subprocess.CalledProcessError(22, "curl")):
+            with self.assertRaises(server.subprocess.CalledProcessError):
+                server.fetch_chart("BMNR")
+
+
 class Safety(unittest.TestCase):
     def test_only_expected_files_are_served(self):
         self.assertEqual(set(server.STATIC), {"/", "/lightweight-charts.js", "/calc.js"})

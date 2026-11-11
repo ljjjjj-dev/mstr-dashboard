@@ -369,7 +369,7 @@ input, select, #planWhy { border-radius: 10px; }
       </div>
       <div class="chips" id="chips">
         <span class="ma-picks"></span>
-        <label><input id="showCross" type="checkbox" checked> 金叉死叉</label>
+        <label><input id="showCross" type="checkbox" checked> <span class="cross-name">金叉死叉</span></label>
         <label><input id="showEarn" type="checkbox" checked> 财报日</label>
         <div class="seg sp" id="subs"><button data-sub="off" class="on" type="button">不看副图</button><button data-sub="macd" type="button">MACD</button><button data-sub="rsi" type="button">RSI</button></div>
       </div>
@@ -425,7 +425,7 @@ input, select, #planWhy { border-radius: 10px; }
     </div>
     <div class="chips" id="bChips">
       <span class="ma-picks"></span>
-      <label><input id="bShowCross" type="checkbox" checked> 金叉死叉</label>
+      <label><input id="bShowCross" type="checkbox" checked> <span class="cross-name">金叉死叉</span></label>
     </div>
     <div id="bOhlc"></div>
     <div class="stage"><div id="bChart"></div></div>
@@ -779,6 +779,8 @@ const maShow = { short: true, mid: true, long: true, ...store.get('maShow', {}) 
 function renderMaPicks() {
   for (const [box, view] of [[$('chips'), S.view], [$('bChips'), B.view]]) {
     const v = VIEWS[view], unit = view === 'week' ? '周' : '天';
+    // 金叉死叉只看最短和最长两条线，写清楚免得和中间那条混淆
+    box.querySelector('.cross-name').textContent = `金叉死叉（${v.short} / ${v.long} ${view === 'week' ? '周' : '日'}线）`;
     box.querySelector('.ma-picks').innerHTML = MA_KEYS.map(([k, color]) => `<label><input type="checkbox" data-ma="${k}" ${maShow[k] ? 'checked' : ''}><i style="background:var(${color})"></i>${v[k]} ${unit}平均价</label>`).join('');
   }
   [maShort, maMid, maLong].forEach((s, i) => s.applyOptions({ visible: maShow[MA_KEYS[i][0]] }));
@@ -1132,6 +1134,7 @@ async function loadMag() {
   const got = await Promise.allSettled(MAG_LOAD.map(sym => getJson('/api/chart?symbol=' + encodeURIComponent(sym))));
   got.forEach((g, i) => { if (g.status === 'fulfilled') S.mag[MAG_LOAD[i]] = parseDaily(g.value); });
   S.magFailed = got.filter(g => g.status !== 'fulfilled').length;
+  S.health.mag = S.magFailed === 0;
   S.magAt = Date.now();
 }
 function renderMag() {
@@ -1176,6 +1179,7 @@ $('qdiiClass').addEventListener('click', e => {
 async function loadQdii() {
   if (S.qdiiAt && Date.now() - S.qdiiAt < 600000) return;
   try { S.qdii = await getJson('/api/qdii'); S.qdiiFail = false; } catch { S.qdiiFail = true; }
+  S.health.qdii = !S.qdiiFail;
   S.qdiiAt = Date.now();
 }
 function renderQdii() {
@@ -1493,9 +1497,12 @@ const SOURCES = [
   ['kpi', 'Strategy 官网', 'mNAV、持币数、情绪指数', () => S.kpi?.mstr?.timeStamp, null],
   ['history', 'Strategy 官网', 'mNAV 历史和持币变化', () => S.history?.[0]?.date, 5],
   ['earn', 'Nasdaq', '财报日期', () => S.earn?.[0]?.date, null],
+  ['mag', 'Yahoo Finance', '走势对比的股票和指数', () => S.mag?.AAPL?.bars.at(-1).time, 5],
+  ['qdii', 'GlobalAssetHistory', '场外基金申购状态', () => S.qdii?.stored_at && bj(S.qdii.stored_at, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 3],
 ];
 function dayAge(key) {
-  const t = key === 'yahoo' ? S.mstr?.meta.regularMarketTime * 1000 : key === 'vix' ? S.vix?.meta.regularMarketTime * 1000 : key === 'history' && S.history ? Date.parse(S.history[0].date) : null;
+  const t = key === 'yahoo' ? S.mstr?.meta.regularMarketTime * 1000 : key === 'vix' ? S.vix?.meta.regularMarketTime * 1000 : key === 'history' && S.history ? Date.parse(S.history[0].date)
+    : key === 'mag' && S.mag?.AAPL ? Date.parse(S.mag.AAPL.bars.at(-1).time) : key === 'qdii' && S.qdii?.stored_at ? S.qdii.stored_at * 1000 : null;
   return t ? (Date.now() - t) / 864e5 : null;
 }
 function renderSources() {
@@ -1586,10 +1593,14 @@ addEventListener('load', () => { buildNav(); setupFolds(); });
 
 // --- Refresh loop ---
 async function refresh() {
+  if (S.refreshing) return; // 上一轮还没取完（比如官网历史数据很慢）时不叠加请求
+  S.refreshing = true;
   try {
-    const [m, b, i] = await Promise.all([getJson('/api/chart?symbol=MSTR'), getJson('/api/chart?symbol=BTC-USD'), getJson('/api/intraday')]);
+    const [m, b, i] = await Promise.all([getJson('/api/chart?symbol=MSTR'), getJson('/api/chart?symbol=BTC-USD'), getJson('/api/intraday').catch(() => null)]);
     const firstLoad = !S.mstr;
-    S.mstr = parseDaily(m); S.btc = parseDaily(b); S.intraday = parseIntraday(i);
+    S.mstr = parseDaily(m); S.btc = parseDaily(b);
+    if (i) S.intraday = parseIntraday(i); // 分钟数据只用来判断交易时段，取不到就沿用上一次
+    if (!S.intraday) throw new Error('intraday');
     S.price = S.mstr.meta.regularMarketPrice; S.btcPrice = S.btc.meta.regularMarketPrice;
     S.session = sessionOf(Date.now() / 1000, S.intraday.periods);
     S.ext = extendedQuote(S.session, S.intraday.periods, S.intraday.points, S.price);
@@ -1612,8 +1623,12 @@ async function refresh() {
   } catch (err) {
     S.fail = true; S.health.yahoo = false; renderStatus(); renderSources();
     if (!S.mstr) { $('sentence').textContent = '暂时取不到行情。请检查网络，页面每分钟会自动重试。'; $('chip').className = 'bad'; $('chip').textContent = '连接中断'; }
+  } finally {
+    S.refreshing = false;
   }
 }
+// 浏览器会暂停后台标签页，切回来时马上刷新，不用等下一分钟
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - S.loadedAt > 30000) refresh(); });
 $('refresh').addEventListener('click', refresh);
 refresh();
 setInterval(refresh, 60000);
