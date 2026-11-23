@@ -6,7 +6,7 @@
 
 <p align="center">
   在自己的 Mac 上本地查看 MSTR（Strategy Inc）的行情、mNAV、持币结构与多资产对照。<br>
-  融合 Apple Sequoia 与 Google Finance 极简高对比设计，零依赖 Python 本机运行，六个工作台一站看全。
+  融合极简高对比设计，不依赖 Python 本机运行，六个工作台一站看全。
 </p>
 
 <p align="center">
