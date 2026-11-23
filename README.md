@@ -1,54 +1,43 @@
-<p align="center"><img src="docs/icon.svg" width="120" alt=""></p>
+<p align="center">
+  <img src="docs/icon.svg" width="120" alt="mstr-dashboard icon">
+</p>
 
-<h1 align="center">MSTR 看盘</h1>
+<h1 align="center">mstr-dashboard</h1>
 
-<p align="center">在自己的 Mac 上看 MSTR（Strategy Inc）的行情、mNAV 和持币情况。<br>融合 Apple Sequoia 与 Google Finance 极简高对比设计，打开一个本机工作台，行情、K 线、估值、持仓计划、多资产对比和场外基金都在左侧导航里。目前只支持 macOS。</p>
+<p align="center">
+  在自己的 Mac 上本地查看 MSTR（Strategy Inc）的行情、mNAV、持币结构与多资产对照。<br>
+  融合 Apple Sequoia 与 Google Finance 极简高对比设计，零依赖 Python 本机运行，六个工作台一站看全。
+</p>
+
+<p align="center">
+  <a href="https://github.com/ljjjjj-dev/mstr-dashboard/actions/workflows/test.yml"><img src="https://github.com/ljjjjj-dev/mstr-dashboard/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-black?logo=apple" alt="macOS">
+  <img src="https://img.shields.io/badge/Server-Zero--Dep%20Python%203-3776AB?logo=python&logoColor=white" alt="Zero-Dep Python 3">
+  <img src="https://img.shields.io/badge/Charts-Lightweight%20Charts-2962FF" alt="Lightweight Charts">
+</p>
+
+<p align="center">
+  <a href="#功能">功能</a> •
+  <a href="#安装">安装</a> •
+  <a href="#使用">使用</a> •
+  <a href="#工作原理">工作原理</a> •
+  <a href="#目录结构">目录结构</a> •
+  <a href="#常见问题">常见问题</a>
+</p>
 
 ---
 
 ## 功能
 
-想知道 MSTR 现在贵不贵、比特币在干什么、和纳指比谁涨得多，又不想开一堆网站？打开这个页面就能看到六个工作台：
+想知道 MSTR 现在贵不贵、比特币在干什么、和纳指比谁涨得多，又不想开一堆网站？打开这个本机工作台，左侧导航直达六个视图：
 
 1. **总览看板**：现价、盘前/盘后行情、北京时间交易时段进度条、持仓盈亏与交易计划速览、52 周位置、mNAV、波动率与 Beta、市场情绪（8 张核心问答卡片），以及可按偏多/偏空/中性筛选的技术信号和历史金叉死叉。
 2. **K 线行情**：支持 MSTR K 线、比特币 K 线与双图同屏对照，日 K / 周 K、50/100/200 日均线独立开关、成交量、MACD / RSI 联动副图、金叉死叉与财报日标记，以及各价位离现价距离阶梯。
 3. **估值与持币**：mNAV 现行算法与 2020 年起历史走势（含 2026 年 7 月 23 日改定义节点）、每股含币量（BPS）走势、公司持币与资本结构、Nasdaq 财报日与推算买卖比特币记录。
-4. **持仓与交易计划**：填写自己的成本价与股数（K 线图自动画成本参考虚线），测算极端回撤压力，设定价格/回撤/200 日线/mNAV/复盘日期条件并支持历史回看、实盘交易日志和 6 项计划体检。
-5. **对比与定投**：MSTR 与美股七姐妹、各行业龙头、纳指 100、标普 500、上证指数、沪深 300、比特币、BitMine 同屏比累计涨跌，支持快捷预设分组和定投历史模拟。
+4. **持仓与交易计划**：填写自己的成本价与股数（K 线图自动画成本参考虚线），测算极端回撤压力，设定价格 / 回撤 / 200 日线 / mNAV / 复盘日期条件并支持历史回看、实盘交易日志和 6 项计划体检。
+5. **对比与定投**：MSTR 与美股七姐妹、各行业龙头、纳指 100、标普 500、上证指数、沪深 300、比特币、BitMine 同屏比累计涨跌，支持快捷预设分组与定投历史模拟。
 6. **场外基金 QDII**：纳指 100 和标普 500 场外 QDII 基金，支持 A/C 类、只看能买、指数筛选与实时搜索，自动记录申购状态变化日期。
-
-支持默认高对比浅色模式与一键热切换深色模式、**一键隐私打码**（隐藏个人持仓金额与股数），以及将个人持仓、规则与偏好自动保存为本机 JSON（`data/user-data.json` 并每日自动备份，支持 JSON 备份导入导出）。点旁边的 **?** 可以看通俗白话解释，数据每分钟自动更新。
-
-## 运行环境
-
-- **一台 Mac**：暂不支持 Windows、Linux、iPhone 和 Android。
-- **Python 3**：macOS 自带，不需要另外安装任何包。如果第一次运行时提示安装命令行开发者工具，点“安装”即可。
-- **能联网**：行情和官网数据都是实时读取的。
-
-## 安装
-
-在 GitHub 页面点 **Code → Download ZIP** 下载并解压，或者用 Git：
-
-```bash
-git clone https://github.com/ljjjjj-dev/mstr-dashboard.git
-```
-
-想要一个双击就能打开的应用，可以在文件夹里运行一次：
-
-```bash
-cd mstr-dashboard && sh build-mac-app.sh
-```
-
-文件夹里会多出一个 `启动看盘.app`。如果 macOS 提示无法打开，右键点它，再选“打开”。
-
-## 使用
-
-1. 双击 `启动看盘.app`，浏览器会自动打开看盘页面。
-2. 没有生成应用的话，也可以在终端里进入文件夹，运行 `python3 server.py`，再在浏览器打开 `http://127.0.0.1:8765`。这种方式要一直开着终端窗口。
-3. 页面只在你自己的电脑上能打开，别的设备访问不到。
-4. 用应用启动时，程序在后台运行，连续 12 小时没人打开页面就会自动退出，下次再双击一次就好。
-
-个人持仓、交易计划和界面偏好会同时保存在当前浏览器和本机 `data/user-data.json`（每日自动备份到 `data/backups/`），也可随时在右上角「备份/状态」菜单导出或导入 `.json` 备份文件。
 
 ### 页面上的名词
 
@@ -63,43 +52,81 @@ cd mstr-dashboard && sh build-mac-app.sh
 | VIX | 反映美股预期波动的指数 |
 | Beta | 比特币涨跌 1% 时，MSTR 平均涨跌多少 |
 
+## 运行环境
+
+- **一台 Mac**（Apple Silicon / Intel 均可）：目前仅支持 macOS，暂不支持 Windows、Linux 与移动端。
+- **Python 3**：macOS 自带标准库即可运行。若首次运行提示安装命令行开发者工具，点击「安装」即可。
+- **可联网**：行情、持币与场外基金状态均为本机实时拉取。
+
+> [!TIP]
+> 无需安装任何第三方 Python 包、Homebrew 或 Node.js，克隆仓库后即可直接启动；只有在修改代码后运行前端单元测试时才需要 Node.js。
+
+## 安装
+
+在 GitHub 页面点击 **Code → Download ZIP** 下载并解压，或使用 Git 克隆：
+
+```bash
+git clone https://github.com/ljjjjj-dev/mstr-dashboard.git
+cd mstr-dashboard
+```
+
+想要一个双击即可打开的 macOS 应用，在项目目录运行一次：
+
+```bash
+sh build-mac-app.sh
+```
+
+当前目录会生成 `启动看盘.app`。如果 macOS 提示无法打开，右键点击应用并选择「打开」即可。
+
+## 使用
+
+1. 双击 `启动看盘.app`，浏览器会自动打开看盘页面。
+2. 也可以不打包，直接在终端运行 `python3 server.py`，然后在浏览器访问 `http://127.0.0.1:8765`（此方式需保持终端窗口开启）。
+3. 服务仅监听本机 `127.0.0.1`，外部设备无法访问；页面数据每 60 秒自动刷新，点击指标旁的 **?** 可查看白话解释。
+4. 通过 `.app` 启动时服务在后台运行，连续 12 小时无人打开页面会自动退出，下次直接再双击即可。
+
+> [!NOTE]
+> 支持默认高对比浅色模式与一键热切换深色模式、**一键隐私打码**（隐藏个人持仓金额与股数）。个人持仓、交易计划与界面偏好会同步保存在本机 `data/user-data.json`（每日自动备份到 `data/backups/`），也可随时在右上角「备份/状态」菜单导出或导入 `.json` 备份文件。
+
 ## 工作原理
 
-`server.py` 在你的电脑上开一个只有本机能访问的小服务，替页面去读各个公开接口（Strategy API 就是 Strategy 官网自己用的数据接口），再把结果交给网页显示，同时在本地 `data/` 保存你的个人配置与备份。仓库里不保存、也不分发这些数据。
+`server.py` 在你的电脑上启动一个仅本机可访问的零依赖服务，替前端页面请求公开接口（Strategy API 即 Strategy 官网公开数据接口），并将个人配置与备份保存在本机 `data/` 目录；仓库本身不保存也不分发任何行情或个人数据。
 
+```mermaid
+flowchart LR
+    A[浏览器工作台<br/>web/index.html] --> B[server.py<br/>本机零依赖 Python 服务]
+    B --> C[Yahoo Finance<br/>股价 · 指数 · BTC · VIX]
+    B --> D[Strategy API<br/>mNAV · 持币数 · 历史数据]
+    B --> E[Nasdaq<br/>财报日期]
+    B --> F[GlobalAssetHistory<br/>场外 QDII 申购状态]
+    B <--> G[data/user-data.json<br/>持仓 · 计划 · 每日备份]
 ```
-web/index.html ─▶ server.py ─▶ Yahoo Finance        股价、指数、比特币、VIX
-                            ─▶ Strategy API         mNAV、持币数、市值、历史数据
-                            ─▶ Nasdaq               财报日期
-                            ─▶ GlobalAssetHistory   场外基金申购状态（整理自东方财富）
-                            ─▶ data/user-data.json  个人持仓、交易计划与每日备份
-```
 
-这些接口没有承诺一直开放，可能会变或失效，使用时请自己确认符合各数据源的条款。某个接口暂时取不到时，页面会继续显示上一次的数据，不会用 0 代替。
+这些公开接口并未承诺永久不变，使用时请自行确认符合各数据源条款。某个接口临时取不到时，页面会保留上一次成功的数据，不会用 `0` 覆盖。
 
-## 文件夹结构
+## 目录结构
 
-```
+```text
 mstr-dashboard/
-├── server.py                   本地服务：提供页面、转发数据、保存本地配置，只监听本机
-├── build-mac-app.sh            生成双击启动的 启动看盘.app
+├── server.py                   本机零依赖服务：静态页面、接口代理与本地配置存储
+├── build-mac-app.sh            一键生成双击启动的 启动看盘.app
 ├── web/
-│   ├── index.html              多工作台页面
-│   ├── styles.css              Apple × Google 视觉样式（浅色/深色主题）
-│   ├── calc.js                 均线、RSI、定投、规则回测等计算
-│   ├── lightweight-charts.js   图表库
+│   ├── index.html              六个工作台主页面
+│   ├── styles.css              Apple × Google 视觉样式（浅色 / 深色主题）
+│   ├── calc.js                 均线、RSI、定投、规则回测等纯函数计算
+│   ├── lightweight-charts.js   K 线与折线图表库
 │   ├── icon.svg / icon.png     页面图标与 PWA 清单图标
 │   ├── manifest.webmanifest    应用清单
 │   └── app/
 │       ├── store.js            本地 JSON 持久化与备份导入导出
 │       ├── charts.js           图表生命周期、联动与主题切换
 │       └── main.js             60s 行情轮询与六个工作台交互
-├── tests/                      自动测试
-├── docs/                       应用图标和第三方许可证声明
-└── data/                       程序记录的场外基金状态与个人备份，不在仓库里
+├── tests/                      前端计算与后端服务单元测试
+├── docs/                       应用图标与第三方许可证声明
+└── data/                       本机记录的场外基金状态与个人备份（已 gitignore）
 ```
 
-改了代码可以跑一下测试：
+修改代码后可运行全套本地测试：
 
 ```bash
 node --test tests/calc.test.js && python3 -m unittest discover tests
@@ -107,18 +134,23 @@ node --test tests/calc.test.js && python3 -m unittest discover tests
 
 ## 常见问题
 
-- **页面显示“连接中断”**：检查网络，再确认程序还在运行。程序如果已经自动退出，重新双击 `启动看盘.app` 就好。
-- **终端显示 `Address already in use`**：程序已经在运行了，直接打开 `http://127.0.0.1:8765`。
-- **买卖记录的日期和公告对不上**：记录是根据官网每日持币数的变化推算的，日期可能差几天，相邻两笔也可能被合并。准确的成本请看 [Strategy 官网账本](https://www.strategy.com/ledger)。
-- **场外基金的“从哪天开始”是空的**：公开数据里没有官方开放日期，是程序从第一次运行起自己记录状态变化，所以要等状态变过一次才有日期。
-- **想卸载**：关掉程序，删掉整个文件夹即可。
+- **页面显示「连接中断」**：先检查网络，再确认本机服务仍在运行；若已自动退出，重新双击 `启动看盘.app` 即可。
+- **终端显示 `Address already in use`**：说明服务已在运行，直接打开 `http://127.0.0.1:8765`。
+- **买卖记录的日期与公告对不上**：记录是根据官网每日持币数变化推算的，日期可能相差数天，相邻两笔也可能合并。精确成本请参考 [Strategy 官网账本](https://www.strategy.com/ledger)。
+- **场外基金的「从哪天开始」为空**：公开数据不含官方开放日期，程序从首次运行起本地记录状态变更，需待状态变化后才会显示日期。
+- **想卸载**：关闭后台程序，直接删除整个文件夹即可，无任何系统残留。
 
 ## 声明
 
-- 本项目只是一个**个人学习用**的看盘工具，和 Strategy、Yahoo、Nasdaq 没有关联。
-- 页面上的数字只是展示和历史计算，**不构成投资建议**，不提供买卖判断，也不预测涨跌。定投模拟和规则回看都是过去的结果，不代表以后。
-- 数据可能有延迟或错误，只有日线和周线，没有分钟线。下单前请以券商行情为准。程序不连接券商，也不会下单。
+- 本项目仅用于**个人学习与研究**，与 Strategy、Yahoo、Nasdaq 无任何关联。
+- 页面数字仅作信息展示与历史计算，**不构成任何投资建议**，不提供买卖判断，也不预测涨跌；定投模拟与规则回看均为历史结果，不代表未来表现。
+- 数据可能存在延迟或误差，仅提供日线与周线，无分钟线；下单前请以券商实时行情为准，本程序不连接券商也不会执行任何交易。
 - 图表库 [Lightweight Charts](https://github.com/tradingview/lightweight-charts) 遵循 Apache-2.0 许可证，详见 [docs/THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md)。
+
+## 维护与致谢
+
+- 初始架构与核心计算由 **Claude Code** 协助构建。
+- 2026-11-23 起由 **Antigravity** 接手重构与迭代，陆续升级：Apple × Google 六工作台侧边栏界面、默认高对比浅色与深色主题热切换、一键隐私打码以及本机 `data/user-data.json` 持久化与每日自动备份。
 
 ## 许可证
 
