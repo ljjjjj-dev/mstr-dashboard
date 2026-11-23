@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""MSTR 看盘的本地服务：提供页面、转发 Yahoo 行情、发送 Mac 通知。只监听本机。"""
+"""MSTR 看盘的本地服务：提供页面、转发实时行情、保存个人配置与备份、发送 Mac 通知。只监听本机。"""
 import json
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -10,27 +11,63 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 HOST = "127.0.0.1"
-PORT = 8765
+PORT = int(os.environ.get("PORT", "8765"))
 ROOT = Path(__file__).resolve().parent
-SYMBOLS = {"MSTR": "MSTR", "BTC-USD": "BTC-USD", "^VIX": "%5EVIX", "QQQ": "QQQ",
-           "AAPL": "AAPL", "MSFT": "MSFT", "GOOGL": "GOOGL", "AMZN": "AMZN", "NVDA": "NVDA", "META": "META", "TSLA": "TSLA",
-           "BMNR": "BMNR",
-           "MU": "MU", "TSM": "TSM", "AVGO": "AVGO", "PLTR": "PLTR", "COIN": "COIN", "SPCX": "SPCX",
-           "LLY": "LLY", "JPM": "JPM", "BRK-B": "BRK-B", "WMT": "WMT", "MCD": "MCD", "KO": "KO", "XOM": "XOM",
-           "^GSPC": "%5EGSPC", "000001.SS": "000001.SS", "510300.SS": "510300.SS"}
+SYMBOLS = {
+    "MSTR": "MSTR",
+    "BTC-USD": "BTC-USD",
+    "^VIX": "%5EVIX",
+    "QQQ": "QQQ",
+    "AAPL": "AAPL",
+    "MSFT": "MSFT",
+    "GOOGL": "GOOGL",
+    "AMZN": "AMZN",
+    "NVDA": "NVDA",
+    "META": "META",
+    "TSLA": "TSLA",
+    "BMNR": "BMNR",
+    "MU": "MU",
+    "TSM": "TSM",
+    "AVGO": "AVGO",
+    "PLTR": "PLTR",
+    "COIN": "COIN",
+    "SPCX": "SPCX",
+    "LLY": "LLY",
+    "JPM": "JPM",
+    "BRK-B": "BRK-B",
+    "WMT": "WMT",
+    "MCD": "MCD",
+    "KO": "KO",
+    "XOM": "XOM",
+    "^GSPC": "%5EGSPC",
+    "000001.SS": "000001.SS",
+    "510300.SS": "510300.SS",
+}
 CACHE_SECONDS = 30
 STRATEGY_CACHE_SECONDS = 120
 STRATEGY_PATHS = {"/api/strategy/mstr": "mstrKpiData", "/api/strategy/btc": "bitcoinKpis"}
 IDLE_EXIT_SECONDS = 12 * 3600  # 浏览器会暂停后台标签页，所以要等得足够久才能判定页面已关闭
 STATIC = {
     "/": ("web/index.html", "text/html; charset=utf-8"),
+    "/styles.css": ("web/styles.css", "text/css; charset=utf-8"),
+    "/icon.svg": ("web/icon.svg", "image/svg+xml"),
+    "/icon.png": ("web/icon.png", "image/png"),
+    "/manifest.webmanifest": ("web/manifest.webmanifest", "application/manifest+json"),
     "/lightweight-charts.js": ("web/lightweight-charts.js", "text/javascript; charset=utf-8"),
     "/calc.js": ("web/calc.js", "text/javascript; charset=utf-8"),
+    "/app/store.js": ("web/app/store.js", "text/javascript; charset=utf-8"),
+    "/app/charts.js": ("web/app/charts.js", "text/javascript; charset=utf-8"),
+    "/app/main.js": ("web/app/main.js", "text/javascript; charset=utf-8"),
 }
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
+USER_DATA_FILE = ROOT / "data" / "user-data.json"
+BACKUP_DIR = ROOT / "data" / "backups"
+MAX_USER_DATA_BYTES = 524288
+
 _cache = {}
 _lock = threading.Lock()
+_user_data_lock = threading.Lock()
 # 用 monotonic 计时：Mac 睡眠时它不走，醒来后不会误以为页面已经关了很久
 _last_request = time.monotonic()
 # 走势对比一次要取二十多只股票，同时请求太多容易被 Yahoo 限流
@@ -54,7 +91,9 @@ def fetch_chart(symbol, query="range=5y&interval=1d"):
         with _yahoo_slots:
             out = subprocess.run(
                 ["/usr/bin/curl", "-fsS", "-m", "12", "--retry", "2", "--retry-all-errors", "--retry-delay", "1", "-A", UA, url],
-                capture_output=True, timeout=45, check=True,
+                capture_output=True,
+                timeout=45,
+                check=True,
             ).stdout
         json.loads(out)
     except Exception:
@@ -76,7 +115,9 @@ def fetch_strategy(path):
     try:
         out = subprocess.run(
             ["/usr/bin/curl", "-fsS", "-m", "12", "--retry", "1", "--retry-all-errors", "-A", UA, url],
-            capture_output=True, timeout=30, check=True,
+            capture_output=True,
+            timeout=30,
+            check=True,
         ).stdout
         json.loads(out)
     except Exception:
@@ -121,7 +162,18 @@ def history_rows(data):
 QDII_URL = "https://qqq.tools24.uk/api/etf-market/qdii-funds"
 QDII_STATUS_FILE = ROOT / "data" / "qdii-status.json"
 QDII_GROUPS = {"nasdaq100": "纳指 100", "sp500": "标普 500"}
-QDII_KEEP = ("code", "name", "company", "share_class", "purchase_status", "buyable", "daily_limit", "min_purchase", "discounted_rate", "source_url")
+QDII_KEEP = (
+    "code",
+    "name",
+    "company",
+    "share_class",
+    "purchase_status",
+    "buyable",
+    "daily_limit",
+    "min_purchase",
+    "discounted_rate",
+    "source_url",
+)
 
 
 def qdii_rows(data, status_file=None, today=None):
@@ -159,6 +211,32 @@ def earnings_rows(data):
     return data["data"]["earningsSurpriseTable"]["rows"]
 
 
+def load_user_data(path=None):
+    target = Path(path or USER_DATA_FILE)
+    if not target.is_file():
+        return None
+    return target.read_bytes()
+
+
+def save_user_data(payload, path=None, backup_dir=None, today=None):
+    if not isinstance(payload, dict):
+        raise ValueError("invalid_json_object")
+    target = Path(path or USER_DATA_FILE)
+    bdir = Path(backup_dir or BACKUP_DIR)
+    today = today or time.strftime("%Y-%m-%d", time.gmtime(time.time() + 8 * 3600))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    bdir.mkdir(parents=True, exist_ok=True)
+    with _user_data_lock:
+        if target.exists():
+            backup_path = bdir / f"user-data-{today}.json"
+            if not backup_path.exists():
+                shutil.copy2(target, backup_path)
+        tmp = target.with_name(target.name + ".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, target)
+    return {"ok": True, "savedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+
 def notify(message):
     message = message[:200]
     script = 'on run argv\ndisplay notification (item 1 of argv) with title "MSTR 看盘" sound name "Glass"\nend run'
@@ -169,6 +247,12 @@ def notify(message):
         subprocess.Popen(["/usr/bin/osascript", "-e", alert, message], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:  # 非 Mac 系统没有 osascript，页面内的提示仍然有效
         pass
+
+
+def is_json_content_type(header_value):
+    if not header_value:
+        return False
+    return header_value.split(";")[0].strip().lower() == "application/json"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -194,10 +278,11 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path in STATIC:
             name, content_type = STATIC[parsed.path]
             return self.send_body(200, (ROOT / name).read_bytes(), content_type)
-        if parsed.path == "/extras.js":
-            # 可选的本地扩展：local 文件夹不上传，没有时返回空内容
-            body = "\n".join(p.read_text(encoding="utf-8") for p in sorted(ROOT.glob("local/extra-*.js")))
-            return self.send_body(200, body.encode(), "text/javascript; charset=utf-8")
+        if parsed.path == "/api/user-data":
+            body = load_user_data()
+            if body is None:
+                return self.send_body(200, b'{"empty":true}', "application/json; charset=utf-8")
+            return self.send_body(200, body, "application/json; charset=utf-8")
         if parsed.path == "/api/chart":
             symbol = parse_qs(parsed.query).get("symbol", [""])[0]
             if symbol not in SYMBOLS:
@@ -218,9 +303,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_body(502, b'{"error":"upstream"}')
         if parsed.path == "/api/earnings":
             try:
-                return self.send_body(200, cached_json(
-                    "https://api.nasdaq.com/api/company/MSTR/earnings-surprise", 6 * 3600, earnings_rows,
-                    ("Accept: application/json",)))
+                return self.send_body(
+                    200,
+                    cached_json(
+                        "https://api.nasdaq.com/api/company/MSTR/earnings-surprise",
+                        6 * 3600,
+                        earnings_rows,
+                        ("Accept: application/json",),
+                    ),
+                )
             except Exception:
                 return self.send_body(502, b'{"error":"upstream"}')
         if parsed.path in STRATEGY_PATHS:
@@ -236,15 +327,29 @@ class Handler(BaseHTTPRequestHandler):
         self.send_body(404, b"{}")
 
     def do_POST(self):
-        # 只接受本页面发出的 JSON 请求，其他网站无法借此弹通知
-        if not self.host_ok() or self.path != "/api/notify" or self.headers.get("Content-Type") != "application/json":
+        if not self.host_ok() or not is_json_content_type(self.headers.get("Content-Type")):
             return self.send_body(403, b"{}")
-        length = min(int(self.headers.get("Content-Length") or 0), 2000)
-        try:
-            notify(str(json.loads(self.rfile.read(length))["message"]))
-        except (ValueError, KeyError, TypeError):
-            return self.send_body(400, b"{}")
-        self.send_body(200, b"{}")
+        if self.path == "/api/user-data":
+            try:
+                raw_len = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                return self.send_body(400, b'{"error":"invalid_length"}')
+            if raw_len <= 0 or raw_len > MAX_USER_DATA_BYTES:
+                return self.send_body(400, b'{"error":"payload_too_large"}')
+            try:
+                payload = json.loads(self.rfile.read(raw_len))
+                result = save_user_data(payload)
+                return self.send_body(200, json.dumps(result).encode("utf-8"))
+            except (ValueError, TypeError, OSError) as exc:
+                return self.send_body(400, json.dumps({"error": str(exc)}).encode("utf-8"))
+        if self.path == "/api/notify":
+            length = min(int(self.headers.get("Content-Length") or 0), 2000)
+            try:
+                notify(str(json.loads(self.rfile.read(length))["message"]))
+            except (ValueError, KeyError, TypeError):
+                return self.send_body(400, b"{}")
+            return self.send_body(200, b"{}")
+        return self.send_body(403, b"{}")
 
     def log_message(self, *args):
         pass

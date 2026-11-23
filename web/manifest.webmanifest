@@ -1,0 +1,16 @@
+{
+  "name": "MSTR 看盘",
+  "short_name": "MSTR 看盘",
+  "description": "Apple × Google 美学 MSTR 行情、mNAV 与卖出规则工作台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F5F7",
+  "theme_color": "#F5F5F7",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ]
+}

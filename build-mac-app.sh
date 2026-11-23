@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 script=$(mktemp)
 cat > "$script" <<'EOF'
 set appPath to POSIX path of (path to me)
-set cmd to "export PATH=/Library/Frameworks/Python.framework/Versions/Current/bin:/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin; cd " & quoted form of appPath & "/.. || exit 1; if ! lsof -nP -iTCP:8765 -sTCP:LISTEN >/dev/null 2>&1; then nohup python3 server.py >/dev/null 2>&1 & sleep 1; fi; open http://127.0.0.1:8765"
+set cmd to "export PATH=/Library/Frameworks/Python.framework/Versions/Current/bin:/opt/homebrew/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin; cd " & quoted form of appPath & "/.. || exit 1; if ! lsof -nP -iTCP:8765 -sTCP:LISTEN >/dev/null 2>&1; then nohup env PYTHONDONTWRITEBYTECODE=1 python3 server.py >/dev/null 2>&1 & for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do if lsof -nP -iTCP:8765 -sTCP:LISTEN >/dev/null 2>&1; then break; fi; sleep 0.15; done; fi; open http://127.0.0.1:8765"
 do shell script cmd
 EOF
 osacompile -o "启动看盘.app" "$script"

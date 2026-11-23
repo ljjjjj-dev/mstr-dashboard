@@ -1,4 +1,6 @@
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -32,7 +34,6 @@ class DataShapes(unittest.TestCase):
 
 class QdiiTracking(unittest.TestCase):
     def setUp(self):
-        import tempfile
         self.file = Path(tempfile.mkdtemp()) / "status.json"
 
     def payload(self, status):
@@ -69,8 +70,9 @@ class QdiiTracking(unittest.TestCase):
 class Fallbacks(unittest.TestCase):
     def test_chart_keeps_last_data_when_yahoo_fails(self):
         from unittest import mock
+
         url = "https://query1.finance.yahoo.com/v8/finance/chart/MSTR?range=5y&interval=1d"
-        server._cache[url] = (0, b'{"old": 1}')  # 已过期的旧数据
+        server._cache[url] = (0, b'{"old": 1}')
         try:
             with mock.patch.object(server.subprocess, "run", side_effect=server.subprocess.CalledProcessError(22, "curl")):
                 self.assertEqual(server.fetch_chart("MSTR"), b'{"old": 1}')
@@ -79,14 +81,55 @@ class Fallbacks(unittest.TestCase):
 
     def test_chart_fails_when_there_is_nothing_to_fall_back_on(self):
         from unittest import mock
+
         with mock.patch.object(server.subprocess, "run", side_effect=server.subprocess.CalledProcessError(22, "curl")):
             with self.assertRaises(server.subprocess.CalledProcessError):
                 server.fetch_chart("BMNR")
 
 
+class UserDataPersistence(unittest.TestCase):
+    def setUp(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.data_file = tmp / "user-data.json"
+        self.backup_dir = tmp / "backups"
+
+    def test_load_missing_returns_none(self):
+        self.assertIsNone(server.load_user_data(self.data_file))
+
+    def test_atomic_save_and_daily_backup(self):
+        first = {"position": {"cost": "250", "qty": "10"}}
+        res1 = server.save_user_data(first, self.data_file, self.backup_dir, "2026-11-23")
+        self.assertTrue(res1["ok"])
+        self.assertEqual(json.loads(server.load_user_data(self.data_file)), first)
+        self.assertFalse((self.backup_dir / "user-data-2026-11-23.json").exists())
+
+        second = {"position": {"cost": "280", "qty": "12"}}
+        server.save_user_data(second, self.data_file, self.backup_dir, "2026-11-23")
+        self.assertEqual(json.loads(server.load_user_data(self.data_file)), second)
+        backup = self.backup_dir / "user-data-2026-11-23.json"
+        self.assertTrue(backup.is_file())
+        self.assertEqual(json.loads(backup.read_text(encoding="utf-8")), first)
+
+    def test_rejects_non_dict_payload(self):
+        with self.assertRaises(ValueError):
+            server.save_user_data([1, 2, 3], self.data_file, self.backup_dir, "2026-11-23")
+
+
 class Safety(unittest.TestCase):
     def test_only_expected_files_are_served(self):
-        self.assertEqual(set(server.STATIC), {"/", "/lightweight-charts.js", "/calc.js"})
+        expected = {
+            "/",
+            "/styles.css",
+            "/icon.svg",
+            "/icon.png",
+            "/manifest.webmanifest",
+            "/lightweight-charts.js",
+            "/calc.js",
+            "/app/store.js",
+            "/app/charts.js",
+            "/app/main.js",
+        }
+        self.assertEqual(set(server.STATIC), expected)
         for name, _ in server.STATIC.values():
             self.assertTrue((server.ROOT / name).is_file(), name)
 
@@ -94,7 +137,39 @@ class Safety(unittest.TestCase):
         self.assertEqual(server.HOST, "127.0.0.1")
 
     def test_symbols_are_limited(self):
-        self.assertEqual(set(server.SYMBOLS), {"MSTR", "BTC-USD", "^VIX", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BMNR", "MU", "TSM", "AVGO", "PLTR", "COIN", "SPCX", "LLY", "JPM", "BRK-B", "WMT", "MCD", "KO", "XOM", "^GSPC", "000001.SS", "510300.SS"})
+        self.assertEqual(
+            set(server.SYMBOLS),
+            {
+                "MSTR",
+                "BTC-USD",
+                "^VIX",
+                "QQQ",
+                "AAPL",
+                "MSFT",
+                "GOOGL",
+                "AMZN",
+                "NVDA",
+                "META",
+                "TSLA",
+                "BMNR",
+                "MU",
+                "TSM",
+                "AVGO",
+                "PLTR",
+                "COIN",
+                "SPCX",
+                "LLY",
+                "JPM",
+                "BRK-B",
+                "WMT",
+                "MCD",
+                "KO",
+                "XOM",
+                "^GSPC",
+                "000001.SS",
+                "510300.SS",
+            },
+        )
 
 
 if __name__ == "__main__":
