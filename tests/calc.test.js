@@ -224,3 +224,92 @@ test('qdiiStatus：区分暂停、限额和不限额', () => {
   assert.equal(small.limit, 10);
   assert.equal(calc.qdiiStatus({ buyable: true, purchase_status: '开放申购', daily_limit: null }).limit, Infinity);
 });
+
+test('to4Hour：按 UTC 4 小时窗口归并高低开收与成交量', () => {
+  const h1 = [
+    { time: 0, open: 100, high: 110, low: 95, close: 105, volume: 10 },
+    { time: 3600, open: 105, high: 120, low: 100, close: 115, volume: 20 },
+    { time: 14400, open: 115, high: 118, low: 112, close: 114, volume: 5 },
+  ];
+  const h4 = calc.to4Hour(h1);
+  assert.equal(h4.length, 2);
+  assert.deepEqual(h4[0], { time: 0, open: 100, high: 120, low: 95, close: 115, volume: 30 });
+  assert.deepEqual(h4[1], { time: 14400, open: 115, high: 118, low: 112, close: 114, volume: 5 });
+});
+
+test('fibGoldenPocket：正确区分上涨回调与下跌反弹的 0.618–0.66 黄金口袋', () => {
+  const upBars = [
+    { time: '2026-01-01', open: 100, high: 105, low: 100, close: 102 },
+    { time: '2026-01-02', open: 102, high: 130, low: 101, close: 125 },
+    { time: '2026-01-03', open: 125, high: 160, low: 120, close: 155 },
+    { time: '2026-01-04', open: 155, high: 200, low: 150, close: 195 },
+    { time: '2026-01-05', open: 195, high: 180, low: 135, close: 136 },
+  ];
+  const up = calc.fibGoldenPocket(upBars, 90);
+  assert.equal(up.dir, 'up');
+  close(up.gp618, 138.2);
+  close(up.gp660, 134);
+  close(up.ext113, 213);
+
+  const downBars = [
+    { time: '2026-01-01', open: 195, high: 200, low: 190, close: 192 },
+    { time: '2026-01-02', open: 192, high: 180, low: 150, close: 155 },
+    { time: '2026-01-03', open: 155, high: 140, low: 120, close: 125 },
+    { time: '2026-01-04', open: 125, high: 120, low: 100, close: 105 },
+    { time: '2026-01-05', open: 105, high: 140, low: 105, close: 135 },
+  ];
+  const down = calc.fibGoldenPocket(downBars, 90);
+  assert.equal(down.dir, 'down');
+  close(down.gp618, 161.8);
+  close(down.gp660, 166);
+});
+
+test('volumeProfile：POC 落在最大成交量价格带且 VAL <= POC <= VAH', () => {
+  const bars = [
+    { low: 90, high: 95, close: 92, volume: 10 },
+    { low: 99, high: 101, close: 100, volume: 500 },
+    { low: 105, high: 110, close: 108, volume: 10 },
+  ];
+  const vp = calc.volumeProfile(bars, 20, 0.7);
+  assert.ok(vp.poc >= 98 && vp.poc <= 102);
+  assert.ok(vp.val <= vp.poc && vp.poc <= vp.vah);
+});
+
+test('swingLiquidityAnd2B：能识别 2B 向上假突破与向下破底翻', () => {
+  const highs = [100, 102, 104, 120, 112, 110, 108, 111, 115, 123];
+  const lows =  [ 95,  97,  99, 110, 105, 103, 101, 104, 108, 114];
+  const closes =[ 98, 101, 103, 118, 108, 105, 104, 109, 113, 117]; // bar 9 刺破 120 至 123 后收盘跌回 117
+  const bars = highs.map((h, i) => ({
+    time: `2026-01-${String(i + 1).padStart(2, '0')}`,
+    open: lows[i] + 1,
+    high: h,
+    low: lows[i],
+    close: closes[i],
+    volume: 100,
+  }));
+  const res = calc.swingLiquidityAnd2B(bars, 117, 2, 3);
+  assert.equal(res.recentSweep?.type, 'bear_sweep');
+  assert.equal(res.recentSweep?.level, 120);
+});
+
+test('unfilledGaps & keyOpens & tiaBtcSummary：能识别未回补缺口并输出 7 项文字解盘', () => {
+  const cme = [
+    { time: '2026-11-06', open: 60000, high: 61000, low: 59500, close: 60800 },
+    { time: '2026-11-09', open: 63000, high: 64000, low: 62500, close: 63500 }, // 61000-62500 跳空
+    { time: '2026-11-10', open: 63500, high: 64200, low: 62000, close: 63800 }, // 部分回补到 62000，剩 61000-62000
+  ];
+  const gaps = calc.unfilledGaps(cme, cme, 63800);
+  assert.equal(gaps.cmeNearest.low, 61000);
+  assert.equal(gaps.cmeNearest.high, 62000);
+
+  const daily = Array.from({ length: 200 }, (_, i) => {
+    const d = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
+    const base = 50000 + i * 80 + Math.sin(i / 4) * 1500;
+    return { time: d, open: base - 200, high: base + 600, low: base - 600, close: base + 150, volume: 1e9 };
+  });
+  const opens = calc.keyOpens(daily);
+  assert.ok(opens.weeklyOpen > 0 && opens.monthlyOpen > 0 && opens.yearlyOpen > 0);
+  const summary = calc.tiaBtcSummary(daily, daily.at(-1).close, { cmeBars: cme });
+  assert.equal(summary.items.length, 7);
+  assert.ok(summary.headline.includes('0.618–0.66'));
+});

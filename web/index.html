@@ -14,13 +14,12 @@
   </head>
   <body>
     <div class="shell">
-      <!-- Frosted macOS Sequoia Sidebar -->
       <aside class="sidebar">
         <div class="brand">
           <img class="brand-logo" src="/icon.png" alt="MSTR 看盘" />
           <div>
             <div class="brand-title">MSTR 看盘</div>
-            <div class="brand-sub">Strategy Inc · 实时行情</div>
+            <div class="brand-sub">Strategy · BTC</div>
           </div>
         </div>
 
@@ -41,7 +40,7 @@
           </div>
         </div>
 
-        <div class="nav-section-label">分析视图</div>
+        <div class="nav-section-label">工作台</div>
         <nav class="nav-list" aria-label="主导航">
           <button class="nav-btn active" data-tab="overview" type="button">
             <span class="nav-btn-left">
@@ -64,7 +63,7 @@
           <button class="nav-btn" data-tab="strategy" type="button">
             <span class="nav-btn-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>持仓与交易计划</span>
+              <span>持仓与计划</span>
             </span>
           </button>
           <button class="nav-btn" data-tab="compare" type="button">
@@ -76,7 +75,7 @@
           <button class="nav-btn" data-tab="qdii" type="button">
             <span class="nav-btn-left">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
-              <span>场外基金 QDII</span>
+              <span>场外 QDII</span>
             </span>
           </button>
         </nav>
@@ -85,7 +84,7 @@
           <div class="sync-status">
             <span class="sync-left">
               <span class="sync-dot" id="syncDot"></span>
-              <span id="syncText">正在读取本地配置...</span>
+              <span id="syncText">读取配置…</span>
             </span>
           </div>
           <button class="source-status-btn" id="openSourceModal" type="button">
@@ -98,7 +97,6 @@
         </div>
       </aside>
 
-      <!-- Main Column -->
       <div class="main-wrap">
         <header class="topbar">
           <div class="topbar-inner">
@@ -112,20 +110,20 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
                 <span>刷新</span>
               </button>
-              <button class="icon-btn" id="privacyBtn" type="button" title="一键打码隐藏个人持仓金额与股数">
+              <button class="icon-btn" id="privacyBtn" type="button" title="隐藏个人持仓金额与股数">
                 <svg id="privacyEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                 <span id="privacyLabel">隐私</span>
               </button>
               <div class="menu-wrap">
                 <button class="icon-btn" id="dataMenuBtn" type="button">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8M8 17h8"/></svg>
-                  <span>备份/状态</span>
+                  <span>备份</span>
                 </button>
                 <div class="menu-pop" id="dataMenuPop" hidden>
                   <button class="menu-item" id="exportBackupBtn" type="button">导出持仓与计划 (.json)</button>
                   <button class="menu-item" id="importBackupBtn" type="button">导入备份恢复 (.json)</button>
                   <div class="menu-divider"></div>
-                  <button class="menu-item" id="menuSourceBtn" type="button">查看 7 路数据源健康</button>
+                  <button class="menu-item" id="menuSourceBtn" type="button">查看数据源状态</button>
                 </div>
                 <input id="importFileInput" type="file" accept=".json" hidden />
               </div>
@@ -138,10 +136,10 @@
           <div class="mobile-nav" id="mobileNav">
             <button class="pill-btn primary" data-tab="overview" type="button">总览</button>
             <button class="pill-btn" data-tab="charts" type="button">K 线</button>
-            <button class="pill-btn" data-tab="valuation" type="button">估值持币</button>
+            <button class="pill-btn" data-tab="valuation" type="button">估值</button>
             <button class="pill-btn" data-tab="strategy" type="button">持仓计划</button>
-            <button class="pill-btn" data-tab="compare" type="button">对比定投</button>
-            <button class="pill-btn" data-tab="qdii" type="button">场外基金</button>
+            <button class="pill-btn" data-tab="compare" type="button">对比</button>
+            <button class="pill-btn" data-tab="qdii" type="button">QDII</button>
           </div>
         </header>
 
@@ -152,17 +150,14 @@
           </div>
 
           <div class="container">
-            <!-- =========================================================
-                 VIEW 1: 总览看板 (Overview)
-                 ========================================================= -->
+            <!-- VIEW 1: 总览看板 -->
             <div class="view-pane active" data-pane="overview">
-              <!-- Block 1: Hero Canvas -->
               <section class="card hero-card">
                 <div class="hero-top">
                   <div class="hero-left">
                     <div class="hero-eyebrow">
-                      <span>Strategy Inc · 纳斯达克 MSTR</span>
-                      <span id="priceLabel">等待实时行情</span>
+                      <span>MSTR · Strategy Inc</span>
+                      <span id="priceLabel">读取中</span>
                     </div>
                     <div class="hero-price-row">
                       <div class="hero-figure tabular" id="price">--</div>
@@ -184,141 +179,90 @@
                   <div class="hero-right-stack">
                     <button class="status-box" data-tab="strategy" type="button">
                       <div class="status-box-head">
-                        <span>我的持仓盈亏速览</span>
-                        <span style="color:var(--blue)">调整成本 ›</span>
+                        <span>我的持仓盈亏</span>
+                        <span style="color:var(--blue)">设置 ›</span>
                       </div>
                       <div class="status-box-val tabular" id="heroPosVal">未填成本价</div>
-                      <div class="status-box-sub" id="heroPosSub">前往「持仓与交易计划」录入成本与股数</div>
+                      <div class="status-box-sub" id="heroPosSub">点击录入成本与股数</div>
                     </button>
 
                     <button class="status-box" data-tab="strategy" type="button">
                       <div class="status-box-head">
-                        <span>交易计划监控状态</span>
-                        <span style="color:var(--blue)">管理计划 ›</span>
+                        <span>交易计划监控</span>
+                        <span style="color:var(--blue)">管理 ›</span>
                       </div>
                       <div class="status-box-val" id="heroPlanTitle">尚未设定规则</div>
-                      <div class="status-box-sub" id="heroPlanDesc">写下自己的买入理由、条件提醒与复盘日期</div>
+                      <div class="status-box-sub" id="heroPlanDesc">记录买入理由、条件提醒与复盘日</div>
                     </button>
                   </div>
                 </div>
 
-                <!-- 4-Cell Hairline Strip -->
-                <div class="metrics-strip">
-                  <div class="metric-cell">
-                    <div class="metric-label">官网 mNAV 溢价倍数 <button class="q-help-btn" data-term="mnav" type="button" aria-label="解释 mNAV">?</button></div>
-                    <div class="metric-value tabular" id="heroMnav">--</div>
-                    <div class="metric-note" id="heroMnavSub">正在读取 Strategy 官网…</div>
+                <div class="overview-grid">
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">官网 mNAV 溢价</span><button class="q-help-btn" data-term="mnav" type="button">?</button></div>
+                    <div class="ov-val tabular" id="qMnav">--</div>
+                    <div class="ov-note" id="qMnavT">读取官网中…</div>
                   </div>
-                  <div class="metric-cell">
-                    <div class="metric-label">比特币 BTC-USD <button class="q-help-btn" data-term="corr" type="button" aria-label="解释联动">?</button></div>
-                    <div class="metric-value tabular" id="heroBtc">--</div>
-                    <div class="metric-note" id="heroBtcSub">正在读取比特币行情…</div>
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">52 周位置</span><button class="q-help-btn" data-term="range" type="button">?</button></div>
+                    <div class="ov-val tabular" id="qPlace">--</div>
+                    <div class="range-meter"><div class="range-track"><span class="range-pin" id="qPlacePin" style="left:0%"></span></div></div>
+                    <div class="ov-note" id="qPlaceT">--</div>
                   </div>
-                  <div class="metric-cell">
-                    <div class="metric-label">52 周区间位置 <button class="q-help-btn" data-term="range" type="button" aria-label="解释一年位置">?</button></div>
-                    <div class="metric-value tabular" id="heroRange">--</div>
-                    <div class="metric-note" id="heroRangeSub">近一年高低区间定位</div>
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">均线趋势 (50/200D)</span><button class="q-help-btn" data-term="ma" type="button">?</button></div>
+                    <div class="ov-val" id="qTrend">--</div>
+                    <div class="ov-note" id="qTrendT">--</div>
                   </div>
-                  <div class="metric-cell">
-                    <div class="metric-label">60 日波动 &amp; Beta <button class="q-help-btn" data-term="vola" type="button" aria-label="解释波动">?</button></div>
-                    <div class="metric-value tabular" id="heroVola">--</div>
-                    <div class="metric-note" id="heroVolaSub">相对比特币平均变动倍数</div>
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">RSI 强弱 (14D)</span><button class="q-help-btn" data-term="rsi" type="button">?</button></div>
+                    <div class="ov-val" id="qForce">--</div>
+                    <div class="ov-note" id="qForceT">--</div>
+                  </div>
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">日均波动 &amp; Beta</span><button class="q-help-btn" data-term="vola" type="button">?</button></div>
+                    <div class="ov-val tabular" id="qVola">--</div>
+                    <div class="ov-note" id="qVolaT">--</div>
+                  </div>
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">情绪 &amp; VIX</span><button class="q-help-btn" data-term="fear" type="button">?</button></div>
+                    <div class="ov-val" id="qFear">--</div>
+                    <div class="ov-note" id="qFearT">--</div>
+                  </div>
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">比特币 BTC-USD</span><button class="q-help-btn" data-term="corr" type="button">?</button></div>
+                    <div class="ov-val tabular" id="qBtc">--</div>
+                    <div class="ov-note" id="qBtcT">--</div>
+                  </div>
+                  <div class="ov-cell">
+                    <div class="ov-top"><span class="ov-label">BTC 200周均线偏离</span><button class="q-help-btn" data-term="cost" type="button">?</button></div>
+                    <div class="ov-val tabular" id="qCost">--</div>
+                    <div class="ov-note" id="qCostT">--</div>
                   </div>
                 </div>
               </section>
 
-              <!-- Block 2: 8 Core Plain-Language Cards -->
-              <section class="qs-grid">
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#007AFF"></span><span class="q-ask">比起它持有的比特币，贵了多少？</span></div>
-                    <button class="q-help-btn" data-term="mnav" type="button" aria-label="解释 mNAV">?</button>
+              <section class="card" id="tiaOverviewCard">
+                <div class="card-header">
+                  <div>
+                    <div class="card-title">
+                      <span>BTC · 提阿非罗常用指标盘面解读</span>
+                      <span class="badge badge-btc tabular" id="tiaOvPrice">BTC --</span>
+                      <button class="q-help-btn" data-term="tia" type="button">?</button>
+                    </div>
+                    <div class="card-sub">结构 / 流动性猎杀(2B) · 0.618–0.66 黄金口袋 · 筹码 POC/VAH/VAL · Vegas 隧道 · CME 缺口 · 周月开盘价</div>
                   </div>
-                  <div class="q-val tabular" id="qMnav">--</div>
-                  <p class="q-say" id="qMnavT">正在从官网读取…</p>
-                  <p class="q-small" id="qMnavS"></p>
+                  <button class="pill-btn sm" id="jumpBtcChartBtn" type="button">打开 BTC 图表与画线 ›</button>
                 </div>
-
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#188038"></span><span class="q-ask">现在的价格，在一年里算高还是低？</span></div>
-                    <button class="q-help-btn" data-term="range" type="button" aria-label="解释一年位置">?</button>
-                  </div>
-                  <div class="q-val tabular" id="qPlace">--</div>
-                  <div class="range-meter">
-                    <div class="range-track"><span class="range-pin" id="qPlacePin" style="left:0%"></span></div>
-                    <div class="range-ends tabular"><span id="qLo">--</span><span id="qHi">--</span></div>
-                  </div>
-                  <p class="q-say" id="qPlaceT"></p>
-                </div>
-
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#E37400"></span><span class="q-ask">最近几个月是涨势还是跌势？</span></div>
-                    <button class="q-help-btn" data-term="ma" type="button" aria-label="解释平均线">?</button>
-                  </div>
-                  <div class="q-val" id="qTrend">--</div>
-                  <p class="q-say" id="qTrendT"></p>
-                  <p class="q-small" id="qTrendS"></p>
-                </div>
-
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#7C3AED"></span><span class="q-ask">这几周，涨的力量大还是跌的力量大？</span></div>
-                    <button class="q-help-btn" data-term="rsi" type="button" aria-label="解释 RSI">?</button>
-                  </div>
-                  <div class="q-val" id="qForce">--</div>
-                  <p class="q-say" id="qForceT"></p>
-                  <p class="q-small" id="qForceS"></p>
-                </div>
-
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#1E8E9E"></span><span class="q-ask">它平时一天能波动多少？</span></div>
-                    <button class="q-help-btn" data-term="vola" type="button" aria-label="解释波动">?</button>
-                  </div>
-                  <div class="q-val tabular" id="qVola">--</div>
-                  <p class="q-say" id="qVolaT"></p>
-                  <p class="q-small" id="qVolaS"></p>
-                </div>
-
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#F7931A"></span><span class="q-ask">比特币现在怎么样？</span></div>
-                    <button class="q-help-btn" data-term="corr" type="button" aria-label="解释变动倍数">?</button>
-                  </div>
-                  <div class="q-val tabular" id="qBtc">--</div>
-                  <p class="q-say" id="qBtcT"></p>
-                  <p class="q-small" id="qBtcS"></p>
-                </div>
-
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#D93025"></span><span class="q-ask">市场现在害怕吗？</span></div>
-                    <button class="q-help-btn" data-term="fear" type="button" aria-label="解释恐慌指标">?</button>
-                  </div>
-                  <div class="q-val" id="qFear">--</div>
-                  <p class="q-say" id="qFearT"></p>
-                  <p class="q-small" id="qFearS"></p>
-                </div>
-
-                <div class="q-card">
-                  <div class="q-top">
-                    <div class="q-ask-wrap"><span class="q-dot" style="background:#D97706"></span><span class="q-ask">比特币离长期成本线多远？</span></div>
-                    <button class="q-help-btn" data-term="cost" type="button" aria-label="解释长期成本线">?</button>
-                  </div>
-                  <div class="q-val tabular" id="qCost">--</div>
-                  <p class="q-say" id="qCostT"></p>
-                  <p class="q-small" id="qCostS"></p>
-                </div>
+                <div class="tia-headline" id="tiaOvHeadline">正在计算比特币多周期结构、黄金口袋、筹码密集区与 CME 缺口…</div>
+                <div class="tia-grid" id="tiaOvGrid"></div>
               </section>
 
-              <!-- Block 3: Technical Signals & Golden/Death Crosses -->
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">各项技术信号清点 <span class="badge badge-neutral" id="tallyBadge">--</span></div>
-                    <div class="card-sub">按指标当前客观位置清点状态，按下方胶囊可筛选视角</div>
+                    <div class="card-title">MSTR 技术信号清点 <span class="badge badge-neutral" id="tallyBadge">--</span></div>
+                    <div class="card-sub">客观展示指标位置，不代表胜率或买卖建议</div>
                   </div>
                   <div class="chip-row" id="signalFilter">
                     <button class="chip active" data-sfilter="all" type="button">全部</button>
@@ -327,44 +271,33 @@
                     <button class="chip" data-sfilter="flat" type="button">中性</button>
                   </div>
                 </div>
-                <p class="caution-note" style="margin-bottom:14px">这里只清点各项指标当前的状态，不判断买入或卖出时机，也不预测涨跌。信号的多少不代表胜率，请结合自己的资金情况独立决定，或咨询持牌顾问。</p>
                 <div class="signals-grid" id="signals"></div>
 
-                <details class="apple-details" style="margin-top:16px">
-                  <summary>查看 50 日线和 200 日线的历史金叉 / 死叉记录 ▾</summary>
-                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-                    <span style="font-size:12.5px;color:var(--text-secondary)">点击旁边问号了解交叉含义</span>
-                    <button class="q-help-btn" data-term="cross" type="button" aria-label="解释金叉死叉">?</button>
-                  </div>
+                <details class="apple-details" style="margin-top:10px">
+                  <summary>查看 50 / 200 日线历史金叉与死叉记录 ▾</summary>
                   <div class="table-wrap"><table id="crossTable"></table></div>
-                  <p class="card-sub" id="crossNote" style="margin-top:10px"></p>
+                  <p class="card-sub" id="crossNote" style="margin-top:6px"></p>
                 </details>
               </section>
             </div>
 
-            <!-- =========================================================
-                 VIEW 2: K 线行情 (Charts)
-                 ========================================================= -->
+            <!-- VIEW 2: K 线行情 -->
             <div class="view-pane" data-pane="charts">
-              <section class="card card-compact" style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px">
-                <div>
-                  <div class="card-title">专业 K 线工作台（红涨绿跌）</div>
-                  <div class="card-sub">支持日 K / 周 K 切换、均线独立开关、MACD / RSI 副图联动及持仓成本参考线</div>
-                </div>
+              <div class="chart-mode-bar">
                 <div class="segmented" id="chartLayoutSeg">
                   <button class="active" data-clayout="mstr" type="button">MSTR K 线</button>
-                  <button data-clayout="btc" type="button">比特币 K 线</button>
+                  <button data-clayout="btc" type="button">比特币 K 线（含提阿非罗指标）</button>
                   <button data-clayout="dual" type="button">双图对照</button>
                 </div>
-              </section>
+                <span class="card-sub">红涨绿跌 · 悬停查看单根 K 线数值</span>
+              </div>
 
               <div id="chartsDualWrap">
-                <!-- MSTR K-Line Panel -->
                 <div class="chart-split" id="mstrChartSection">
                   <section class="card">
                     <div class="chart-toolbar">
                       <div class="chart-controls">
-                        <div class="card-title">MSTR K 线</div>
+                        <div class="card-title">MSTR</div>
                         <div class="segmented segmented-sm" id="views">
                           <button data-view="day" class="active" type="button">日 K</button>
                           <button data-view="week" type="button">周 K</button>
@@ -378,41 +311,41 @@
                         </div>
                       </div>
                       <div class="segmented segmented-sm" id="subs">
-                        <button data-sub="off" class="active" type="button">不看副图</button>
+                        <button data-sub="off" class="active" type="button">无副图</button>
                         <button data-sub="macd" type="button">MACD</button>
                         <button data-sub="rsi" type="button">RSI</button>
                       </div>
                     </div>
 
                     <div class="chips-bar" id="chips">
-                      <span class="ma-picks" style="display:inline-flex;flex-wrap:wrap;gap:10px 14px"></span>
+                      <span class="ma-picks" style="display:inline-flex;flex-wrap:wrap;gap:6px 12px"></span>
                       <label><input id="showCross" type="checkbox" checked /> <span class="cross-name">金叉死叉</span></label>
                       <label><input id="showEarn" type="checkbox" checked /> 财报日</label>
                     </div>
 
-                    <div class="ohlc-bar" id="ohlc">将鼠标移到 K 线上查看当天或当周价格详情…</div>
+                    <div class="ohlc-bar tabular" id="ohlc">移动鼠标查看 K 线详情…</div>
                     <div class="chart-stage"><div id="chart"></div></div>
                     <div class="sub-chart-box" id="sub" hidden></div>
-                    <p class="card-sub" id="subNote" hidden style="margin-top:8px"></p>
+                    <p class="card-sub" id="subNote" hidden style="margin-top:6px"></p>
                   </section>
 
                   <aside class="card readout-card">
                     <div class="readout-block">
-                      <div class="readout-head"><span>各个价位离现价多远</span></div>
+                      <div class="readout-head"><span>关键价位距离</span></div>
                       <ul class="ladder tabular" id="ladder"></ul>
                     </div>
                     <div class="readout-block">
                       <div class="readout-head">
-                        <span>RSI（日线 / 周线）</span>
-                        <button class="q-help-btn" data-term="rsi" type="button" aria-label="解释 RSI">?</button>
+                        <span>RSI（日 / 周）</span>
+                        <button class="q-help-btn" data-term="rsi" type="button">?</button>
                       </div>
                       <div class="readout-big tabular" id="rsiV">--</div>
                       <p class="card-sub" id="rsiT"></p>
                     </div>
                     <div class="readout-block">
                       <div class="readout-head">
-                        <span>成交量倍数</span>
-                        <button class="q-help-btn" data-term="vol" type="button" aria-label="解释成交量">?</button>
+                        <span>成交量比（20日均）</span>
+                        <button class="q-help-btn" data-term="vol" type="button">?</button>
                       </div>
                       <div class="readout-big tabular" id="volV">--</div>
                       <p class="card-sub" id="volT"></p>
@@ -420,69 +353,91 @@
                   </aside>
                 </div>
 
-                <!-- Bitcoin K-Line Panel -->
-                <div class="chart-split" id="btcChartSection" style="margin-top:20px" hidden>
-                  <section class="card">
-                    <div class="chart-toolbar">
-                      <div class="chart-controls">
-                        <div class="card-title">比特币 K 线（BTC-USD）</div>
-                        <div class="segmented segmented-sm" id="bViews">
-                          <button data-view="day" class="active" type="button">日 K</button>
-                          <button data-view="week" type="button">周 K</button>
+                <div id="btcChartSection" style="margin-top:13px" hidden>
+                  <div class="chart-split">
+                    <section class="card">
+                      <div class="chart-toolbar">
+                        <div class="chart-controls">
+                          <div class="card-title">BTC-USD</div>
+                          <div class="segmented segmented-sm" id="bViews">
+                            <button data-view="4h" type="button">4H</button>
+                            <button data-view="day" class="active" type="button">日 K</button>
+                            <button data-view="week" type="button">周 K</button>
+                          </div>
+                          <div class="segmented segmented-sm" id="bRanges">
+                            <button data-m="3" type="button">3月</button>
+                            <button data-m="6" class="active" type="button">6月</button>
+                            <button data-m="12" type="button">1年</button>
+                            <button data-m="24" type="button">2年</button>
+                            <button data-m="60" type="button">5年</button>
+                          </div>
                         </div>
-                        <div class="segmented segmented-sm" id="bRanges">
-                          <button data-m="3" type="button">3月</button>
-                          <button data-m="6" class="active" type="button">6月</button>
-                          <button data-m="12" type="button">1年</button>
-                          <button data-m="24" type="button">2年</button>
-                          <button data-m="60" type="button">5年</button>
-                        </div>
+                        <span class="card-sub" id="bViewHint">UTC 0 点日线 · 提阿非罗常用指标已接入</span>
                       </div>
-                      <span class="card-sub">红：收盘不低于开盘</span>
-                    </div>
 
-                    <div class="chips-bar" id="bChips">
-                      <span class="ma-picks" style="display:inline-flex;flex-wrap:wrap;gap:10px 14px"></span>
-                      <label><input id="bShowCross" type="checkbox" checked /> <span class="cross-name">金叉死叉</span></label>
-                    </div>
+                      <div class="chips-bar" id="bChips">
+                        <span class="ma-picks" style="display:inline-flex;flex-wrap:wrap;gap:6px 12px"></span>
+                        <label><input id="bShowCross" type="checkbox" /> <span class="cross-name">金叉死叉</span></label>
+                        <span style="color:var(--border-strong)">|</span>
+                        <label title="EMA 144 / 169 维加斯趋势隧道"><input type="checkbox" data-tia="vegas" checked /> <i class="ma-swatch" style="background:var(--vegas-a)"></i>Vegas 隧道</label>
+                        <label title="近 90 日波段 0.618–0.66 黄金回调/反弹口袋"><input type="checkbox" data-tia="fib" checked /> <i class="ma-swatch" style="background:var(--btc)"></i>0.618–0.66</label>
+                        <label title="盘整区筹码控制点 POC 与 70% 价值区 VAH/VAL"><input type="checkbox" data-tia="vp" checked /> <i class="ma-swatch" style="background:var(--purple)"></i>POC/VAH/VAL</label>
+                        <label title="波段前高前低流动性线与 2B 假突破标记"><input type="checkbox" data-tia="liquidity" checked /> 前高前低 &amp; 2B</label>
+                        <label title="周线开盘价、月线开盘价与最近未回补 CME 缺口中轴"><input type="checkbox" data-tia="opens" /> 周/月开盘 &amp; CME</label>
+                      </div>
 
-                    <div class="ohlc-bar" id="bOhlc">将鼠标移到 K 线上查看当天或当周价格详情…</div>
-                    <div class="chart-stage"><div id="bChart"></div></div>
-                    <p class="card-sub" style="margin-top:8px">比特币全天 24 小时、周末也交易，日 K 按世界标准时间（UTC）每天 0 点分隔，平均线按自然日计算。</p>
+                      <div class="ohlc-bar tabular" id="bOhlc">移动鼠标查看 K 线详情…</div>
+                      <div class="chart-stage"><div id="bChart"></div></div>
+                    </section>
+
+                    <aside class="card readout-card">
+                      <div class="readout-block">
+                        <div class="readout-head">
+                          <span>BTC 关键位距离阶梯</span>
+                          <button class="q-help-btn" data-term="tia" type="button">?</button>
+                        </div>
+                        <ul class="ladder tabular" id="bLadder"></ul>
+                      </div>
+                      <div class="readout-block">
+                        <div class="readout-head">
+                          <span>RSI（日 / 周 / 4H）</span>
+                          <button class="q-help-btn" data-term="rsi" type="button">?</button>
+                        </div>
+                        <div class="readout-big tabular" id="bRsiV">--</div>
+                        <p class="card-sub" id="bRsiT"></p>
+                      </div>
+                      <div class="readout-block">
+                        <div class="readout-head">
+                          <span>成交额比（20日均）</span>
+                          <button class="q-help-btn" data-term="vol" type="button">?</button>
+                        </div>
+                        <div class="readout-big tabular" id="bVolV">--</div>
+                        <p class="card-sub" id="bVolT"></p>
+                      </div>
+                    </aside>
+                  </div>
+
+                  <section class="card" style="margin-top:13px">
+                    <div class="card-header">
+                      <div>
+                        <div class="card-title">
+                          <span>提阿非罗盘面指标文字解盘</span>
+                          <button class="q-help-btn" data-term="tia" type="button">?</button>
+                        </div>
+                        <div class="card-sub">每次查看自动按最新日线、4H 与 CME 期货数据生成客观文字状态</div>
+                      </div>
+                    </div>
+                    <div class="tia-headline" id="tiaChartHeadline">正在计算比特币关键位与结构…</div>
+                    <div class="tia-grid" id="tiaChartGrid"></div>
                   </section>
-
-                  <aside class="card readout-card">
-                    <div class="readout-block">
-                      <div class="readout-head"><span>各个价位离现价多远</span></div>
-                      <ul class="ladder tabular" id="bLadder"></ul>
-                    </div>
-                    <div class="readout-block">
-                      <div class="readout-head">
-                        <span>RSI（日线 / 周线）</span>
-                        <button class="q-help-btn" data-term="rsi" type="button" aria-label="解释 RSI">?</button>
-                      </div>
-                      <div class="readout-big tabular" id="bRsiV">--</div>
-                      <p class="card-sub" id="bRsiT"></p>
-                    </div>
-                    <div class="readout-block">
-                      <div class="readout-head">
-                        <span>成交额倍数</span>
-                        <button class="q-help-btn" data-term="vol" type="button" aria-label="解释成交量">?</button>
-                      </div>
-                      <div class="readout-big tabular" id="bVolV">--</div>
-                      <p class="card-sub" id="bVolT"></p>
-                    </div>
-                  </aside>
                 </div>
               </div>
             </div>
 
-            <!-- =========================================================
-                 VIEW 3: 估值与持币 (Valuation & Holdings)
-                 ========================================================= -->
+            <!-- VIEW 3: 估值与持币 -->
             <div class="view-pane" data-pane="valuation">
               <section class="card card-compact">
-                <div class="metrics-strip" style="margin-top:0;padding-top:0;border-top:none">
+                <div class="metrics-strip">
                   <div class="metric-cell">
                     <div class="metric-label">官网现行 mNAV</div>
                     <div class="metric-value tabular" id="valKpiMnav">--</div>
@@ -491,32 +446,31 @@
                   <div class="metric-cell">
                     <div class="metric-label">公司持有比特币</div>
                     <div class="metric-value tabular" id="valKpiBtc">--</div>
-                    <div class="metric-note" id="valKpiBtcShare">占比特币总供应量比例</div>
+                    <div class="metric-note" id="valKpiBtcShare">占总供应量比例</div>
                   </div>
                   <div class="metric-cell">
-                    <div class="metric-label">扣除债务后每股含币</div>
+                    <div class="metric-label">扣债后每股含币</div>
                     <div class="metric-value tabular" id="valKpiNetBps">--</div>
-                    <div class="metric-note" id="valKpiGrossBps">总每股含币价值</div>
+                    <div class="metric-note" id="valKpiGrossBps">每股净含币价值</div>
                   </div>
                   <div class="metric-cell">
-                    <div class="metric-label">公司市值 / 债务优先股</div>
+                    <div class="metric-label">总市值 / 债务优先股</div>
                     <div class="metric-value tabular" id="valKpiMcap">--</div>
-                    <div class="metric-note" id="valKpiDebt">Strategy 官网披露口径</div>
+                    <div class="metric-note" id="valKpiDebt">官网披露口径</div>
                   </div>
                 </div>
               </section>
 
-              <!-- mNAV History -->
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">mNAV 的过去和现在 <button class="q-help-btn" data-term="mnav" type="button" aria-label="解释 mNAV">?</button></div>
-                    <div class="card-sub" id="mnavNote">正在读取官网历史数据…</div>
+                    <div class="card-title">mNAV 历史走势 <button class="q-help-btn" data-term="mnav" type="button">?</button></div>
+                    <div class="card-sub" id="mnavNote">读取官网历史数据…</div>
                   </div>
-                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
                     <div class="segmented segmented-sm" id="mnavMode">
                       <button data-mode="official" class="active" type="button">官网数据</button>
-                      <button data-mode="early" type="button">看更早（2020 起）</button>
+                      <button data-mode="early" type="button">2020 起简化口径</button>
                     </div>
                     <div class="segmented segmented-sm" id="mnavRange">
                       <button data-m="6" type="button">6月</button>
@@ -527,178 +481,157 @@
                 </div>
                 <div class="analytics-split">
                   <div class="facts-panel">
-                    <div style="font-size:12px;color:var(--text-tertiary)">当前倍数值</div>
+                    <div style="font-size:11px;color:var(--text-tertiary)">当前倍数</div>
                     <div class="facts-big tabular" id="mnavNow">--</div>
-                    <p class="card-sub" id="mnavSay" style="margin-top:0">正在读取官网历史数据…</p>
+                    <p class="card-sub" id="mnavSay">读取中…</p>
                     <dl class="facts-list tabular" id="mnavFacts"></dl>
                   </div>
                   <div>
-                    <div class="legend-row" id="mnavLegend" style="margin-bottom:8px"></div>
+                    <div class="legend-row" id="mnavLegend" style="margin-bottom:6px"></div>
                     <div class="chart-box-md" id="mnavChart"></div>
                   </div>
                 </div>
               </section>
 
-              <!-- Bitcoin Per Share -->
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">每股含币量的走势 <button class="q-help-btn" data-term="pershare" type="button" aria-label="解释每股含币量">?</button></div>
-                    <div class="card-sub">根据 Strategy 官网每股持币数（BPS）换算，观察增持与增发的相对速度</div>
-                  </div>
-                  <div class="legend-row">
-                    <span class="legend-item"><span class="legend-line" style="background:var(--btc)"></span>每股对应的比特币（枚）</span>
+                    <div class="card-title">每股含币量走势 <button class="q-help-btn" data-term="pershare" type="button">?</button></div>
+                    <div class="card-sub">由官网 satsPerShare 换算（未扣债），观察买币与增发相对速度</div>
                   </div>
                 </div>
                 <div class="analytics-split">
                   <div class="facts-panel">
-                    <div style="font-size:12px;color:var(--text-tertiary)">当前每股含币量</div>
+                    <div style="font-size:11px;color:var(--text-tertiary)">当前每股含币</div>
                     <div class="facts-big tabular" id="psNow">--</div>
-                    <p class="card-sub" id="psSay" style="margin-top:0">正在读取官网历史数据…</p>
+                    <p class="card-sub" id="psSay">读取中…</p>
                     <dl class="facts-list tabular" id="psFacts"></dl>
                   </div>
                   <div class="chart-box-md" id="psChart"></div>
                 </div>
-                <p class="card-sub" style="margin-top:12px">“股数”用持币数 ÷ 每股持币数换算，是官网口径的调整后股数，和普通股总数不同，且未扣除债务；持币和增发日期错开时会呈现台阶式变化。</p>
               </section>
 
-              <!-- Company Facts + Earnings -->
               <section class="grid-12">
                 <div class="card col-5">
                   <div class="card-header">
-                    <div>
-                      <div class="card-title">公司持币与资本结构</div>
-                      <div class="card-sub">自动同步自 strategy.com</div>
-                    </div>
-                    <a class="pill-btn sm" href="https://www.strategy.com" target="_blank" rel="noopener">官网主页 ↗</a>
+                    <div class="card-title">持币与资本结构</div>
+                    <a class="pill-btn sm" href="https://www.strategy.com" target="_blank" rel="noopener">官网 ↗</a>
                   </div>
                   <dl class="facts-list tabular" id="facts">
-                    <div><dt>正在从官网读取…</dt><dd>--</dd></div>
+                    <div><dt>读取中…</dt><dd>--</dd></div>
                   </dl>
                 </div>
 
                 <div class="card col-7">
                   <div class="card-header">
                     <div>
-                      <div class="card-title">财报发布日与次日表现</div>
-                      <div class="card-sub">日期来自 Nasdaq（美东时间，通常盘后公布）</div>
+                      <div class="card-title">财报日与次日表现</div>
+                      <div class="card-sub">来自 Nasdaq（通常盘后公布）</div>
                     </div>
                   </div>
-                  <div class="hero-sentence" id="earnNext" style="margin-top:0;margin-bottom:12px">正在读取…</div>
+                  <div class="card-sub" id="earnNext" style="margin-bottom:8px;color:var(--text-secondary)">读取中…</div>
                   <div class="table-wrap"><table id="earnTable"></table></div>
-                  <p class="card-sub" style="margin-top:10px">“下一交易日涨跌”比较公布当天和下一交易日收盘价，仅作历史记录参考。</p>
                 </div>
               </section>
 
-              <!-- Holdings Changes Ledger -->
               <section class="card">
                 <div class="card-header">
                   <div>
                     <div class="card-title">公司买卖比特币推算记录</div>
-                    <div class="card-sub">根据官网每日持币数变化推算，“当时币价”为当日比特币收盘价</div>
+                    <div class="card-sub">按官网每日持币数变动推算</div>
                   </div>
                   <a class="pill-btn sm" href="https://www.strategy.com/ledger" target="_blank" rel="noopener">官网账本 ↗</a>
                 </div>
-                <div class="hero-sentence" id="ledgerNext" style="margin-top:0;margin-bottom:12px">正在读取…</div>
+                <div class="card-sub" id="ledgerNext" style="margin-bottom:8px;color:var(--text-secondary)">读取中…</div>
                 <div class="table-wrap"><table id="ledgerTable"></table></div>
               </section>
             </div>
 
-            <!-- =========================================================
-                 VIEW 4: 持仓与交易计划 (Position & Trading Plan)
-                 ========================================================= -->
+            <!-- VIEW 4: 持仓与计划 -->
             <div class="view-pane" data-pane="strategy">
-              <!-- Top Position + Stress Test Card -->
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">我的持仓与风险压力测试</div>
-                    <div class="card-sub">数据实时保存在本机 JSON 中（支持顶部「隐私」一键打码隐藏金额与股数）</div>
+                    <div class="card-title">我的持仓与压力测试</div>
+                    <div class="card-sub">自动保存至本机 JSON，支持右上角「隐私」打码</div>
                   </div>
                 </div>
 
-                <div class="grid-12" style="gap:18px">
-                  <div class="col-6 facts-panel" style="padding:18px 20px">
+                <div class="grid-12">
+                  <div class="col-6 facts-panel">
                     <form class="apple-form" id="posForm">
-                      <label for="cost">成本价（美元）</label>
-                      <input class="apple-input tabular" id="cost" type="number" min="0" step="0.01" placeholder="美元" style="width:120px" />
-                      <label for="qty">持股数</label>
-                      <input class="apple-input tabular" id="qty" type="number" min="0" step="any" placeholder="可不填" style="width:110px" />
+                      <label for="cost">成本价($)</label>
+                      <input class="apple-input tabular" id="cost" type="number" min="0" step="0.01" placeholder="美元" style="width:105px" />
+                      <label for="qty">股数</label>
+                      <input class="apple-input tabular" id="qty" type="number" min="0" step="any" placeholder="选填" style="width:95px" />
                     </form>
-                    <div class="facts-big tabular" id="plV" style="margin-top:6px">--</div>
-                    <p class="card-sub" id="plT" style="margin-top:0">填入成本价后，K 线图上会出现一条成本参考虚线。</p>
-                    <p class="card-sub" style="margin-top:4px">提示：未扣除手续费、股息税与汇率波动影响。</p>
+                    <div class="facts-big tabular" id="plV">--</div>
+                    <p class="card-sub" id="plT">填入成本后，MSTR K 线自动显示成本虚线。</p>
                   </div>
 
-                  <div class="col-6 facts-panel" style="padding:18px 20px">
-                    <div style="font-size:13px;font-weight:600;color:var(--text)">极端回撤压力测试（先算好最坏情况）</div>
+                  <div class="col-6 facts-panel">
+                    <div style="font-size:12px;font-weight:600;color:var(--text)">极端回撤测算</div>
                     <dl class="facts-list tabular" id="planStress"></dl>
-                    <p class="card-sub" id="planStressNote" style="margin-top:2px"></p>
+                    <p class="card-sub" id="planStressNote"></p>
                   </div>
                 </div>
               </section>
 
-              <!-- Custom Trading Plan -->
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">我的自定义交易计划</div>
-                    <div class="card-sub">写下买入理由、复盘日期与条件提醒，内容保存在本机 JSON 并每日自动备份</div>
+                    <div class="card-title">自定义交易计划</div>
+                    <div class="card-sub">条件触发时仅作本地提醒，不会自动下单</div>
                   </div>
                 </div>
-                <p class="caution-note" style="margin-bottom:18px">规则和数字都由你自己决定。工具只负责提醒，不会替你判断，也不会自动下单。</p>
 
                 <div class="plan-grid">
-                  <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+                  <div style="display:flex;flex-direction:column;gap:11px;min-width:0">
                     <div>
-                      <label for="planWhy" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">我当初为什么买？这个理由消失时我怎么办？</label>
-                      <textarea class="apple-textarea" id="planWhy" placeholder="用自己的话写下来，规则触发提醒时会完整展示给你看。"></textarea>
+                      <label for="planWhy" style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">买入理由与失效退出条件</label>
+                      <textarea class="apple-textarea" id="planWhy" placeholder="写下买入逻辑，触发提醒时会一并展示。"></textarea>
                     </div>
 
                     <div class="apple-form">
-                      <label for="planReview">下次复盘日期</label>
+                      <label for="planReview">下次复盘日</label>
                       <input class="apple-input" id="planReview" type="date" />
-                    </div>
-
-                    <div>
-                      <div style="font-size:13px;font-weight:600;margin-bottom:8px">快速套用常见条件</div>
+                      <span style="color:var(--border-strong)">|</span>
                       <div class="chip-row" id="tmpl">
-                        <button type="button" class="chip" data-t="priceBelow" data-n="例如：先重新看一遍买入理由，再决定是否减仓">跌到某个价</button>
-                        <button type="button" class="chip" data-t="priceAbove" data-n="例如：考虑卖出一部分，并记录下来">涨到某个价</button>
-                        <button type="button" class="chip" data-t="drawdown" data-n="例如：停下来检查仓位是否超出能承受的范围">从高点回撤</button>
-                        <button type="button" class="chip" data-t="belowMa200" data-n="例如：复盘趋势，暂不追加">连续低于 200 日线</button>
+                        <button type="button" class="chip" data-t="priceBelow" data-n="重看买入理由，评估是否减仓">跌到某价</button>
+                        <button type="button" class="chip" data-t="priceAbove" data-n="分批止盈一部分">涨到某价</button>
+                        <button type="button" class="chip" data-t="drawdown" data-n="检查仓位风险">高点回撤</button>
+                        <button type="button" class="chip" data-t="belowMa200" data-n="复盘长期趋势">破 200 日线</button>
                       </div>
                     </div>
 
                     <form class="apple-form" id="ruleForm">
-                      <label for="ruleType">当</label>
-                      <select class="apple-select" id="ruleType">
-                        <option value="priceBelow">价格跌到或低于（美元）</option>
-                        <option value="priceAbove">价格涨到或高于（美元）</option>
-                        <option value="drawdown">从设定后的高点回撤达到（%）</option>
-                        <option value="belowMa200">连续低于 200 日线（交易日）</option>
-                        <option value="mnavBelow">官网 mNAV 低于或等于（倍）</option>
-                        <option value="mnavAbove">官网 mNAV 高于或等于（倍）</option>
-                        <option value="date">到了这个日期</option>
+                      <select class="apple-select" id="ruleType" aria-label="规则类型">
+                        <option value="priceBelow">价格 ≤ ($)</option>
+                        <option value="priceAbove">价格 ≥ ($)</option>
+                        <option value="drawdown">高点回撤 ≥ (%)</option>
+                        <option value="belowMa200">连续低于 200 日线 (天)</option>
+                        <option value="mnavBelow">mNAV ≤ (倍)</option>
+                        <option value="mnavAbove">mNAV ≥ (倍)</option>
+                        <option value="date">到达日期</option>
                       </select>
-                      <input class="apple-input tabular" id="ruleValue" type="number" min="0" step="any" required aria-label="规则数值" style="width:120px" />
-                      <input class="apple-input" id="ruleNote" type="text" maxlength="200" placeholder="我打算怎么做（自己写）" aria-label="我打算怎么做" style="flex:1 1 200px" />
-                      <button class="pill-btn primary" type="submit">添加规则</button>
+                      <input class="apple-input tabular" id="ruleValue" type="number" min="0" step="any" required aria-label="规则数值" style="width:105px" />
+                      <input class="apple-input" id="ruleNote" type="text" maxlength="200" placeholder="触发后打算怎么做" style="flex:1 1 180px" />
+                      <button class="pill-btn primary" type="submit">添加</button>
                     </form>
 
                     <div class="table-wrap"><table id="ruleTable"></table></div>
 
-                    <div style="padding-top:12px;border-top:0.5px solid var(--hairline)">
-                      <div style="font-size:13px;font-weight:600;margin-bottom:10px">实际操作记录（交易日志）</div>
-                      <form class="apple-form" id="tradeForm" style="margin-bottom:12px">
+                    <div style="padding-top:10px;border-top:0.5px solid var(--hairline)">
+                      <div style="font-size:12px;font-weight:600;margin-bottom:7px">实盘交易日志</div>
+                      <form class="apple-form" id="tradeForm" style="margin-bottom:8px">
                         <input class="apple-input" id="tradeDate" type="date" required aria-label="日期" />
                         <select class="apple-select" id="tradeSide" aria-label="方向">
                           <option value="卖出">卖出</option>
                           <option value="买入">买入</option>
                         </select>
-                        <input class="apple-input tabular" id="tradeShares" type="number" min="0" step="any" placeholder="股数" required aria-label="股数" style="width:95px" />
-                        <input class="apple-input tabular" id="tradePrice" type="number" min="0" step="0.01" placeholder="成交价" required aria-label="成交价" style="width:105px" />
-                        <input class="apple-input" id="tradeNote" type="text" maxlength="120" placeholder="当时为什么这样做" aria-label="原因" style="flex:1 1 160px" />
+                        <input class="apple-input tabular" id="tradeShares" type="number" min="0" step="any" placeholder="股数" required style="width:85px" />
+                        <input class="apple-input tabular" id="tradePrice" type="number" min="0" step="0.01" placeholder="成交价" required style="width:95px" />
+                        <input class="apple-input" id="tradeNote" type="text" maxlength="120" placeholder="备注原因" style="flex:1 1 140px" />
                         <button class="pill-btn primary" type="submit">记录</button>
                       </form>
                       <div class="table-wrap"><table id="tradeTable"></table></div>
@@ -706,30 +639,26 @@
                   </div>
 
                   <div class="facts-panel">
-                    <div style="font-size:13.5px;font-weight:600">计划完整性体检</div>
+                    <div style="font-size:12px;font-weight:600">计划完整性检查</div>
                     <ul class="check-list" id="planCheck"></ul>
-                    <p class="card-sub">只检查关键防线有没有写全，不代表规则本身好坏。</p>
                   </div>
                 </div>
               </section>
             </div>
 
-            <!-- =========================================================
-                 VIEW 5: 对比与定投 (Compare & DCA)
-                 ========================================================= -->
+            <!-- VIEW 5: 对比与定投 -->
             <div class="view-pane" data-pane="compare">
-              <!-- Multi-Asset Relative Performance -->
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">多资产走势对比 <button class="q-help-btn" data-term="mag7" type="button" aria-label="解释走势对比">?</button></div>
-                    <div class="card-sub">以区间起点为 0%，横向对比 MSTR 与七姐妹、各行业龙头、指数及比特币的累计涨跌幅</div>
+                    <div class="card-title">多资产累计涨跌对比 <button class="q-help-btn" data-term="mag7" type="button">?</button></div>
+                    <div class="card-sub">区间起点归零，对比 MSTR、七姐妹、龙头股、指数与 BTC</div>
                   </div>
-                  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
                     <div class="chip-row" id="magPreset">
-                      <button class="chip" data-mpreset="core" type="button">仅看核心</button>
-                      <button class="chip" data-mpreset="mag7" type="button">七姐妹 + MSTR</button>
-                      <button class="chip" data-mpreset="all" type="button">全选对比</button>
+                      <button class="chip" data-mpreset="core" type="button">核心</button>
+                      <button class="chip" data-mpreset="mag7" type="button">七姐妹</button>
+                      <button class="chip" data-mpreset="all" type="button">全选</button>
                     </div>
                     <div class="segmented segmented-sm" id="magRange">
                       <button data-m="3" type="button">3月</button>
@@ -741,10 +670,10 @@
                   </div>
                 </div>
 
-                <div class="mag-picks" id="magPicks" style="margin-bottom:18px"></div>
+                <div class="mag-picks" id="magPicks" style="margin-bottom:12px"></div>
 
                 <div class="analytics-split">
-                  <div class="facts-panel" style="padding:14px 16px">
+                  <div class="facts-panel" style="padding:10px 12px">
                     <div class="table-wrap"><table id="magTable"></table></div>
                     <p class="card-sub" id="magNote"></p>
                   </div>
@@ -752,76 +681,71 @@
                 </div>
               </section>
 
-              <!-- DCA History Simulator -->
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">如果当初每月定投，现在怎么样？ <button class="q-help-btn" data-term="dca" type="button" aria-label="解释定投均价">?</button></div>
-                    <div class="card-sub">按过去真实历史收盘价回测，测算平均买入成本、当前盈亏与途中最大浮亏</div>
+                    <div class="card-title">历史每月定投回测 <button class="q-help-btn" data-term="dca" type="button">?</button></div>
+                    <div class="card-sub">按每月首个交易日收盘价测算历史成本与最大浮亏</div>
                   </div>
-                  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
                     <div class="segmented segmented-sm" id="dcaAsset">
                       <button data-asset="mstr" class="active" type="button">MSTR</button>
-                      <button data-asset="btc" type="button">比特币</button>
+                      <button data-asset="btc" type="button">BTC</button>
                     </div>
                     <div class="segmented segmented-sm" id="dcaYears">
-                      <button data-y="1" type="button">1 年前</button>
-                      <button data-y="2" type="button">2 年前</button>
-                      <button data-y="3" class="active" type="button">3 年前</button>
-                      <button data-y="5" type="button">5 年前</button>
+                      <button data-y="1" type="button">1年</button>
+                      <button data-y="2" type="button">2年</button>
+                      <button data-y="3" class="active" type="button">3年</button>
+                      <button data-y="5" type="button">5年</button>
                     </div>
                     <form class="apple-form" id="dcaForm">
-                      <label for="dcaAmount">每月投</label>
-                      <input class="apple-input tabular" id="dcaAmount" type="number" min="1" step="1" value="500" style="width:90px" />
-                      <label>美元</label>
+                      <label for="dcaAmount">月投($)</label>
+                      <input class="apple-input tabular" id="dcaAmount" type="number" min="1" step="1" value="500" style="width:80px" />
                     </form>
                   </div>
                 </div>
 
                 <div class="analytics-split">
                   <div class="facts-panel">
-                    <div style="font-size:12px;color:var(--text-tertiary)">历史定投平均成本</div>
+                    <div style="font-size:11px;color:var(--text-tertiary)">定投均价</div>
                     <div class="facts-big tabular" id="dcaAvg">--</div>
-                    <p class="card-sub" id="dcaSay" style="margin-top:0">等待历史数据…</p>
+                    <p class="card-sub" id="dcaSay">等待数据…</p>
                     <dl class="facts-list tabular" id="dcaFacts"></dl>
                   </div>
                   <div>
-                    <div class="legend-row" style="margin-bottom:8px">
-                      <span class="legend-item"><span class="legend-line" style="background:var(--text)"></span>资产价格</span>
-                      <span class="legend-item"><span class="legend-line" style="background:var(--btc)"></span>你的定投均价</span>
+                    <div class="legend-row" style="margin-bottom:6px">
+                      <span class="legend-item"><span class="legend-line" style="background:var(--text)"></span>市价</span>
+                      <span class="legend-item"><span class="legend-line" style="background:var(--btc)"></span>定投均价</span>
                     </div>
                     <div class="chart-box-md" id="dcaChart"></div>
                   </div>
                 </div>
-                <p class="card-sub" style="margin-top:12px">历史模拟假设每月第一个交易日按收盘价买入（可买零碎股），未算手续费、税费与汇率。过去结果不代表未来表现，也不是定投建议。</p>
               </section>
             </div>
 
-            <!-- =========================================================
-                 VIEW 6: 场外基金 QDII (QDII)
-                 ========================================================= -->
+            <!-- VIEW 6: 场外 QDII -->
             <div class="view-pane" data-pane="qdii">
               <section class="card card-compact">
-                <div class="metrics-strip" style="margin-top:0;padding-top:0;border-top:none">
+                <div class="metrics-strip">
                   <div class="metric-cell">
-                    <div class="metric-label">当前筛选基金总数</div>
+                    <div class="metric-label">筛选总数</div>
                     <div class="metric-value tabular" id="qdiiStatTotal">--</div>
                     <div class="metric-note" id="qdiiStatSplit">纳指 100 / 标普 500</div>
                   </div>
                   <div class="metric-cell">
-                    <div class="metric-label">当前可申购基金</div>
+                    <div class="metric-label">可申购</div>
                     <div class="metric-value tabular down" id="qdiiStatOpen">--</div>
-                    <div class="metric-note">含开放不限额与限额申购</div>
+                    <div class="metric-note">开放与限额合计</div>
                   </div>
                   <div class="metric-cell">
-                    <div class="metric-label">单日可买 ≥ 1,000 元</div>
+                    <div class="metric-label">日限额 ≥ 1,000 元</div>
                     <div class="metric-value tabular" id="qdiiStatBig">--</div>
-                    <div class="metric-note">额度相对充足的可买标的</div>
+                    <div class="metric-note">额度较充裕</div>
                   </div>
                   <div class="metric-cell">
-                    <div class="metric-label">状态本地追踪起始</div>
+                    <div class="metric-label">本地追踪起算</div>
                     <div class="metric-value tabular" id="qdiiStatTracked">--</div>
-                    <div class="metric-note">状态变动自动记录日期</div>
+                    <div class="metric-note">变更自动记日期</div>
                   </div>
                 </div>
               </section>
@@ -829,10 +753,10 @@
               <section class="card">
                 <div class="card-header">
                   <div>
-                    <div class="card-title">纳指 100 与标普 500 场外 QDII 基金 <button class="q-help-btn" data-term="qdii" type="button" aria-label="解释场外 QDII">?</button></div>
-                    <div class="card-sub" id="qdiiSay">正在读取场外基金状态…</div>
+                    <div class="card-title">纳指 100 &amp; 标普 500 场外 QDII <button class="q-help-btn" data-term="qdii" type="button">?</button></div>
+                    <div class="card-sub" id="qdiiSay">正在读取…</div>
                   </div>
-                  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
                     <div class="segmented segmented-sm" id="qdiiClass">
                       <button data-c="A" class="active" type="button">A 类</button>
                       <button data-c="C" type="button">C 类</button>
@@ -847,36 +771,34 @@
                       <button data-idx="纳指 100" type="button">纳指 100</button>
                       <button data-idx="标普 500" type="button">标普 500</button>
                     </div>
-                    <input class="apple-input" id="qdiiSearch" type="search" placeholder="搜索基金名称 / 代码 / 公司" style="width:210px;padding:5px 11px;font-size:12.5px" />
+                    <input class="apple-input" id="qdiiSearch" type="search" placeholder="搜名称 / 代码 / 公司" style="width:175px" />
                   </div>
                 </div>
 
                 <div class="table-wrap"><table id="qdiiTable"></table></div>
-                <p class="card-sub" id="qdiiNote" style="margin-top:12px"></p>
+                <p class="card-sub" id="qdiiNote" style="margin-top:8px"></p>
               </section>
             </div>
           </div>
 
           <footer class="footer-note">
-            行情来自 Yahoo Finance，mNAV、持币数与历史数据来自 Strategy 官网，财报日来自 Nasdaq，QDII 状态来自 GlobalAssetHistory。数据可能有延迟，下单前请以券商或平台实时页面为准；本应用仅展示客观数据与个人设定规则，不构成投资建议。所有时间均为北京时间。
+            数据来自 Yahoo Finance（含 CME 比特币期货 BTC=F）、Strategy 官网、Nasdaq 与 GlobalAssetHistory。仅供个人看盘参考，不构成任何投资建议。
           </footer>
         </main>
       </div>
     </div>
 
-    <!-- Data Sources Health Modal -->
     <div class="overlay" id="sourceModal" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sourceModalTitle">
         <div class="sheet-header">
           <div>
-            <div style="font-size:16px;font-weight:600" id="sourceModalTitle">7 路数据源实时状态</div>
-            <div style="font-size:12px;color:var(--text-tertiary);margin-top:2px">取不到数据时继续展示上一次缓存，不会用 0 替代</div>
+            <div style="font-size:14px;font-weight:600" id="sourceModalTitle">数据源实时状态</div>
+            <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:1px">异常时自动保留上次缓存，不用 0 覆盖</div>
           </div>
           <button class="pill-btn sm" id="closeSourceModal" type="button">关闭</button>
         </div>
         <div class="sheet-body">
           <div class="table-wrap"><table id="sourceTable"></table></div>
-          <p class="card-sub" style="margin-top:12px">周末与美股休市日，股票数据停留在最近一个交易日属正常现象。</p>
         </div>
         <div class="sheet-footer">
           <button class="pill-btn primary" id="doneSourceModal" type="button">完成</button>
@@ -888,7 +810,12 @@
 
     <script src="/lightweight-charts.js"></script>
     <script src="/calc.js"></script>
-    <script>Object.assign(window, { rsi, isDownside });</script>
+    <script>
+      Object.assign(window, {
+        rsi, isDownside, to4Hour, volumeProfile, fibGoldenPocket, vegasTunnel,
+        swingLiquidityAnd2B, unfilledGaps, keyOpens, rsiDivergence, tiaBtcSummary
+      });
+    </script>
     <script type="module" src="/app/main.js"></script>
   </body>
 </html>

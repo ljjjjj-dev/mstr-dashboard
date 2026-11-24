@@ -142,6 +142,7 @@ class Safety(unittest.TestCase):
             {
                 "MSTR",
                 "BTC-USD",
+                "BTC=F",
                 "^VIX",
                 "QQQ",
                 "AAPL",

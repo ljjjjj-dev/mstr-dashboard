@@ -59,6 +59,14 @@ export function createDefaultUserData() {
       theme: 'light',
       privacy: false,
       maShow: { short: true, mid: true, long: true },
+      btcMaShow: { short: false, mid: false, long: true },
+      tiaShow: {
+        vegas: true,
+        fib: true,
+        vp: true,
+        liquidity: true,
+        opens: false,
+      },
       magShown: [...DEFAULT_MAG_SHOWN],
       qdiiClass: 'A',
       qdiiFilter: 'open',
@@ -86,6 +94,8 @@ function mergeWithDefault(raw) {
       ...def.prefs,
       ...(raw.prefs || {}),
       maShow: { ...def.prefs.maShow, ...(raw.prefs?.maShow || {}) },
+      btcMaShow: { ...def.prefs.btcMaShow, ...(raw.prefs?.btcMaShow || {}) },
+      tiaShow: { ...def.prefs.tiaShow, ...(raw.prefs?.tiaShow || {}) },
       magShown: Array.isArray(raw.prefs?.magShown) ? raw.prefs.magShown : def.prefs.magShown,
     },
   };

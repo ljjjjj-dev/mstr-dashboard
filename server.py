@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent
 SYMBOLS = {
     "MSTR": "MSTR",
     "BTC-USD": "BTC-USD",
+    "BTC=F": "BTC%3DF",
     "^VIX": "%5EVIX",
     "QQQ": "QQQ",
     "AAPL": "AAPL",
@@ -322,6 +323,11 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/intraday":
             try:
                 return self.send_body(200, fetch_chart("MSTR", "range=1d&interval=1m&includePrePost=true"))
+            except Exception:
+                return self.send_body(502, b'{"error":"upstream"}')
+        if parsed.path == "/api/btc-4h":
+            try:
+                return self.send_body(200, fetch_chart("BTC-USD", "range=60d&interval=1h"))
             except Exception:
                 return self.send_body(502, b'{"error":"upstream"}')
         self.send_body(404, b"{}")

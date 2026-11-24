@@ -1,8 +1,24 @@
 import { MAG7_LIST, MAG_BTC_ITEM, MAG_CN_LIST, MAG_EXTRA_LIST, MAG_LEAD_LIST } from './store.js';
 
-const { LightweightCharts, sma, rsiSeries, macd, crossings, toWeekly, dcaSim, summarize, perShareHistory, rebaseSeries } = window;
+const {
+  LightweightCharts,
+  sma,
+  ema,
+  rsiSeries,
+  macd,
+  crossings,
+  toWeekly,
+  dcaSim,
+  summarize,
+  perShareHistory,
+  rebaseSeries,
+  volumeProfile,
+  fibGoldenPocket,
+  swingLiquidityAnd2B,
+} = window;
 
 export const VIEWS = {
+  '4h': { short: 50, mid: 100, long: 200, name: '4H' },
   day: { short: 50, mid: 100, long: 200, name: '日' },
   week: { short: 10, mid: 20, long: 40, name: '周' },
 };
@@ -25,7 +41,7 @@ function baseOptions(extra = {}) {
       background: { color: 'transparent' },
       textColor: css('--text-tertiary'),
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif',
-      fontSize: 11,
+      fontSize: 10.5,
       attributionLogo: false,
     },
     grid: {
@@ -67,10 +83,10 @@ export class ChartManager {
     this.lastDrawKeys = {};
   }
 
-  ensureChartsForTab(tab, callbacks, layoutMode) {
+  ensureChartsForTab(tab, callbacks, layoutMode, isBtc4h = false) {
     if (tab === 'charts') {
       if (layoutMode === 'mstr' || layoutMode === 'dual') this.initMstr(callbacks);
-      if (layoutMode === 'btc' || layoutMode === 'dual') this.initBtc(callbacks);
+      if (layoutMode === 'btc' || layoutMode === 'dual') this.initBtc(callbacks, isBtc4h);
     } else if (tab === 'valuation') {
       this.initMnav();
       this.initPs();
@@ -115,7 +131,7 @@ export class ChartManager {
     const chart = LightweightCharts.createChart(
       el,
       baseOptions({
-        rightPriceScale: { borderColor: css('--chart-line'), scaleMargins: { top: 0.09, bottom: 0.2 }, minimumWidth: 72 },
+        rightPriceScale: { borderColor: css('--chart-line'), scaleMargins: { top: 0.09, bottom: 0.2 }, minimumWidth: 68 },
         localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: (v) => (v < 0 ? '' : v.toFixed(2)) },
       })
     );
@@ -126,7 +142,7 @@ export class ChartManager {
       wickUpColor: css('--up'),
       wickDownColor: css('--down'),
     });
-    const lineOpts = { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
+    const lineOpts = { lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
     const maShort = chart.addLineSeries({ ...lineOpts, color: css('--ma-short') });
     const maMid = chart.addLineSeries({ ...lineOpts, color: css('--ma-mid') });
     const maLong = chart.addLineSeries({ ...lineOpts, color: css('--ma-long') });
@@ -141,15 +157,15 @@ export class ChartManager {
     const sub = LightweightCharts.createChart(
       subEl,
       baseOptions({
-        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 72 },
+        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 68 },
         timeScale: { visible: false },
       })
     );
     const subOpts = { priceLineVisible: false, lastValueVisible: true, crosshairMarkerVisible: false };
     const subHist = sub.addHistogramSeries({ ...subOpts, lastValueVisible: false });
-    const subMacd = sub.addLineSeries({ ...subOpts, lineWidth: 1.5, color: css('--text'), title: 'MACD' });
-    const subSignal = sub.addLineSeries({ ...subOpts, lineWidth: 1.5, color: css('--btc'), title: '信号' });
-    const subRsi = sub.addLineSeries({ ...subOpts, lineWidth: 1.5, color: css('--ma-short'), title: 'RSI', visible: false });
+    const subMacd = sub.addLineSeries({ ...subOpts, lineWidth: 1.4, color: css('--text'), title: 'MACD' });
+    const subSignal = sub.addLineSeries({ ...subOpts, lineWidth: 1.4, color: css('--btc'), title: '信号' });
+    const subRsi = sub.addLineSeries({ ...subOpts, lineWidth: 1.4, color: css('--ma-short'), title: 'RSI', visible: false });
     for (const price of [70, 30]) {
       subRsi.createPriceLine({
         price,
@@ -180,16 +196,26 @@ export class ChartManager {
     });
   }
 
-  initBtc({ onBtcOhlc }) {
+  initBtc({ onBtcOhlc }, isIntraday = false) {
+    if (this.btc && this.btc.isIntraday !== isIntraday) {
+      this.btc.chart.remove();
+      this.btc = null;
+      this.lastDrawKeys.btc = null;
+    }
     if (this.btc) return;
     const el = document.getElementById('bChart');
     if (!el || el.clientWidth === 0) return;
 
+    const localization = isIntraday
+      ? { locale: 'zh-CN', priceFormatter: (v) => (v < 0 ? '' : v.toFixed(0)) }
+      : { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: (v) => (v < 0 ? '' : v.toFixed(0)) };
+
     const chart = LightweightCharts.createChart(
       el,
       baseOptions({
-        rightPriceScale: { borderColor: css('--chart-line'), scaleMargins: { top: 0.09, bottom: 0.2 }, minimumWidth: 72 },
-        localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: (v) => (v < 0 ? '' : v.toFixed(0)) },
+        rightPriceScale: { borderColor: css('--chart-line'), scaleMargins: { top: 0.08, bottom: 0.19 }, minimumWidth: 74 },
+        timeScale: { borderColor: css('--chart-line'), timeVisible: isIntraday, secondsVisible: false },
+        localization,
       })
     );
     const candles = chart.addCandlestickSeries({
@@ -199,19 +225,22 @@ export class ChartManager {
       wickUpColor: css('--up'),
       wickDownColor: css('--down'),
     });
-    const lineOpts = { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
+    const lineOpts = { lineWidth: 1.4, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
     const ma = MA_KEYS.map(([, color]) => chart.addLineSeries({ ...lineOpts, color: css(color) }));
+    const vegas144 = chart.addLineSeries({ ...lineOpts, lineWidth: 1.8, color: css('--vegas-a') });
+    const vegas169 = chart.addLineSeries({ ...lineOpts, lineWidth: 1.8, color: css('--vegas-b') });
+
     const volume = chart.addHistogramSeries({
       priceFormat: { type: 'volume' },
       priceScaleId: 'vol',
       priceLineVisible: false,
       lastValueVisible: false,
     });
-    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
 
-    this.btc = { chart, candles, ma, volume, prev: new Map(), map: new Map() };
+    this.btc = { chart, candles, ma, vegas144, vegas169, volume, priceLines: [], isIntraday, prev: new Map(), map: new Map() };
     chart.subscribeCrosshairMove((param) => {
-      if (!this.btc.map.size) return;
+      if (!this.btc?.map.size) return;
       const b = param.time ? this.btc.map.get(param.time) : [...this.btc.map.values()].at(-1);
       if (b) onBtcOhlc?.(b, this.btc.prev.get(b.time));
     });
@@ -224,19 +253,19 @@ export class ChartManager {
     const chart = LightweightCharts.createChart(
       el,
       baseOptions({
-        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 72 },
+        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 68 },
         localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: (v) => v.toFixed(2) },
       })
     );
-    const main = chart.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false });
-    const second = chart.addLineSeries({ lineWidth: 2, color: css('--ma-long'), priceLineVisible: false });
+    const main = chart.addLineSeries({ lineWidth: 1.8, color: css('--btc'), priceLineVisible: false });
+    const second = chart.addLineSeries({ lineWidth: 1.8, color: css('--ma-long'), priceLineVisible: false });
     main.createPriceLine({
       price: 1,
       color: css('--text-muted'),
       lineWidth: 1,
       lineStyle: LightweightCharts.LineStyle.Dashed,
       axisLabelVisible: true,
-      title: '1 倍',
+      title: '1x',
     });
     this.mnav = { chart, main, second };
   }
@@ -248,11 +277,11 @@ export class ChartManager {
     const chart = LightweightCharts.createChart(
       el,
       baseOptions({
-        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 72 },
+        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 68 },
         localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: (v) => v.toFixed(5) },
       })
     );
-    const line = chart.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false });
+    const line = chart.addLineSeries({ lineWidth: 1.8, color: css('--btc'), priceLineVisible: false });
     this.ps = { chart, line };
   }
 
@@ -263,7 +292,7 @@ export class ChartManager {
     const chart = LightweightCharts.createChart(
       el,
       baseOptions({
-        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 72 },
+        rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 68 },
         localization: { dateFormat: 'yyyy-MM-dd', locale: 'zh-CN', priceFormatter: (v) => (v > 0 ? '+' : '') + v.toFixed(0) + '%' },
       })
     );
@@ -271,7 +300,7 @@ export class ChartManager {
       MAG_ALL.map(([sym, , color]) => [
         sym,
         chart.addLineSeries({
-          lineWidth: MAG_BOLD.has(sym) ? 3 : 2,
+          lineWidth: MAG_BOLD.has(sym) ? 2.5 : 1.6,
           color: sym === 'MSTR' ? css('--text') : sym === 'QQQ' ? css('--ma-long') : sym === 'BTC' ? css('--btc') : color,
           priceLineVisible: false,
           lastValueVisible: false,
@@ -287,10 +316,10 @@ export class ChartManager {
     if (!el || el.clientWidth === 0) return;
     const chart = LightweightCharts.createChart(
       el,
-      baseOptions({ rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 72 } })
+      baseOptions({ rightPriceScale: { borderColor: css('--chart-line'), minimumWidth: 68 } })
     );
-    const priceLine = chart.addLineSeries({ lineWidth: 2, color: css('--text'), priceLineVisible: false, lastValueVisible: true });
-    const avgLine = chart.addLineSeries({ lineWidth: 2, color: css('--btc'), priceLineVisible: false, lastValueVisible: true });
+    const priceLine = chart.addLineSeries({ lineWidth: 1.8, color: css('--text'), priceLineVisible: false, lastValueVisible: true });
+    const avgLine = chart.addLineSeries({ lineWidth: 1.8, color: css('--btc'), priceLineVisible: false, lastValueVisible: true });
     this.dca = { chart, priceLine, avgLine };
   }
 
@@ -306,15 +335,7 @@ export class ChartManager {
       timeScale: { borderColor: css('--chart-line') },
     };
 
-    const allCharts = [
-      this.mstr?.chart,
-      this.mstr?.sub,
-      this.btc?.chart,
-      this.mnav?.chart,
-      this.ps?.chart,
-      this.mag?.chart,
-      this.dca?.chart,
-    ].filter(Boolean);
+    const allCharts = [this.mstr?.chart, this.mstr?.sub, this.btc?.chart, this.mnav?.chart, this.ps?.chart, this.mag?.chart, this.dca?.chart].filter(Boolean);
     allCharts.forEach((c) => c.applyOptions(common));
 
     if (this.mstr) {
@@ -330,6 +351,8 @@ export class ChartManager {
     if (this.btc) {
       this.btc.candles.applyOptions({ upColor: css('--up'), downColor: css('--down'), wickUpColor: css('--up'), wickDownColor: css('--down') });
       MA_KEYS.forEach(([, col], i) => this.btc.ma[i].applyOptions({ color: css(col) }));
+      this.btc.vegas144.applyOptions({ color: css('--vegas-a') });
+      this.btc.vegas169.applyOptions({ color: css('--vegas-b') });
       this.lastDrawKeys.btc = null;
     }
     if (this.mnav) {
@@ -392,8 +415,8 @@ export class ChartManager {
     if (subNote) {
       subNote.hidden = off;
       subNote.textContent = isMacd
-        ? 'MACD 看短期和中期动能差距：白线在橙线上方说明短期动能强于中期；红绿柱是两者差值，信号存在滞后。'
-        : 'RSI 看近期涨跌力度（0–100），虚线为 70 与 30 参考线；周 K 下对应周线 RSI。';
+        ? 'MACD：快线高于慢线说明短期动能偏强，红绿柱为差值。'
+        : 'RSI(14)：虚线为 70 / 30 参考位。';
     }
     this.mstr.subHist.applyOptions({ visible: isMacd });
     this.mstr.subMacd.applyOptions({ visible: isMacd });
@@ -416,7 +439,7 @@ export class ChartManager {
         lineWidth: 1,
         lineStyle: LightweightCharts.LineStyle.Dashed,
         axisLabelVisible: true,
-        title: '我的成本',
+        title: '成本',
       });
     }
 
@@ -452,8 +475,15 @@ export class ChartManager {
   }
 
   drawBtc(S, state, callbacks, forceRange = false) {
-    if (!this.btc || !S.btc) return;
-    const bars = state.btcView === 'week' ? toWeekly(S.btc.bars) : S.btc.bars;
+    if (!S.btc) return;
+    const is4h = state.btcView === '4h';
+    if (is4h && !S.btc4h?.length) return;
+
+    this.initBtc(callbacks, is4h);
+    if (!this.btc) return;
+
+    const bars = is4h ? S.btc4h : state.btcView === 'week' ? toWeekly(S.btc.bars) : S.btc.bars;
+    if (!bars?.length) return;
     const last = bars.at(-1);
     const v = VIEWS[state.btcView];
     const key = [state.btcView, bars.length, last.close, last.volume, state.theme].join();
@@ -463,6 +493,8 @@ export class ChartManager {
       const line = (vals) => vals.map((value, i) => ({ time: bars[i].time, value })).filter((p) => p.value != null);
       this.btc.candles.setData(bars.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
       MA_KEYS.forEach(([k], i) => this.btc.ma[i].setData(line(sma(closes, v[k]))));
+      this.btc.vegas144.setData(line(ema(closes, 144)));
+      this.btc.vegas169.setData(line(ema(closes, 169)));
       this.btc.volume.setData(
         bars.map((b) => ({ time: b.time, value: b.volume, color: (b.close >= b.open ? css('--up') : css('--down')) + '55' }))
       );
@@ -473,19 +505,90 @@ export class ChartManager {
       forceRange = true;
     }
 
-    MA_KEYS.forEach(([k], i) => this.btc.ma[i].applyOptions({ visible: state.maShow[k] }));
-    const crosses = state.btcShowCross ? crossings(sma(bars.map((b) => b.close), v.short), sma(bars.map((b) => b.close), v.long), bars) : [];
-    this.btc.candles.setMarkers(
-      crosses.map((c) =>
-        c.type === 'gold'
-          ? { time: c.time, position: 'belowBar', shape: 'arrowUp', color: css('--warn'), text: '金叉' }
-          : { time: c.time, position: 'aboveBar', shape: 'arrowDown', color: css('--ma-long'), text: '死叉' }
-      )
-    );
+    const bMa = state.btcMaShow || state.maShow;
+    MA_KEYS.forEach(([k], i) => this.btc.ma[i].applyOptions({ visible: !!bMa[k] }));
+    const tiaShow = state.tiaShow || {};
+    this.btc.vegas144.applyOptions({ visible: !!tiaShow.vegas });
+    this.btc.vegas169.applyOptions({ visible: !!tiaShow.vegas });
+
+    for (const pl of this.btc.priceLines) {
+      this.btc.candles.removePriceLine(pl);
+    }
+    this.btc.priceLines = [];
+    const addLine = (price, color, lineStyle, title) => {
+      if (!(price > 0)) return;
+      this.btc.priceLines.push(
+        this.btc.candles.createPriceLine({
+          price,
+          color,
+          lineWidth: 1,
+          lineStyle,
+          axisLabelVisible: true,
+          title,
+        })
+      );
+    };
+
+    const lookback = is4h ? 150 : state.btcView === 'week' ? 52 : 90;
+    const fib = fibGoldenPocket(bars, lookback);
+    const vp = volumeProfile(bars.slice(-lookback), 36, 0.70);
+    const struct = swingLiquidityAnd2B(bars, S.btcPrice || last.close, 3, 8);
+    const { Solid, Dashed, Dotted } = LightweightCharts.LineStyle;
+
+    if (tiaShow.fib && fib) {
+      addLine(fib.gp618, css('--btc'), Dashed, '0.618');
+      addLine(fib.gp660, css('--btc'), Dashed, '0.66口袋');
+    }
+    if (tiaShow.vp && vp) {
+      addLine(vp.poc, css('--purple'), Solid, 'POC');
+      addLine(vp.vah, css('--purple'), Dotted, 'VAH');
+      addLine(vp.val, css('--purple'), Dotted, 'VAL');
+    }
+    if (tiaShow.liquidity && struct) {
+      addLine(struct.abovePool?.price, css('--up'), Dotted, '前高');
+      addLine(struct.belowPool?.price, css('--down'), Dotted, '前低');
+    }
+    if (tiaShow.opens && S.tia) {
+      if (S.tia.opens) {
+        addLine(S.tia.opens.weeklyOpen, css('--blue'), Dotted, '周开');
+        addLine(S.tia.opens.monthlyOpen, css('--ma-mid'), Dotted, '月开');
+      }
+      if (S.tia.gaps?.cmeNearest) {
+        addLine(S.tia.gaps.cmeNearest.mid, css('--teal'), Dashed, 'CME缺口');
+      }
+    }
+
+    const marks = [];
+    if (state.btcShowCross) {
+      const closes = bars.map((b) => b.close);
+      for (const c of crossings(sma(closes, v.short), sma(closes, v.long), bars)) {
+        marks.push(
+          c.type === 'gold'
+            ? { time: c.time, position: 'belowBar', shape: 'arrowUp', color: css('--warn'), text: '金叉' }
+            : { time: c.time, position: 'aboveBar', shape: 'arrowDown', color: css('--ma-long'), text: '死叉' }
+        );
+      }
+    }
+    if (tiaShow.liquidity && struct?.sweeps?.length) {
+      for (const s of struct.sweeps.slice(-8)) {
+        marks.push(
+          s.type === 'bear_sweep'
+            ? { time: s.time, position: 'aboveBar', shape: 'arrowDown', color: css('--down'), text: '2B假突' }
+            : { time: s.time, position: 'belowBar', shape: 'arrowUp', color: css('--up'), text: '破底翻' }
+        );
+      }
+    }
+    marks.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+    this.btc.candles.setMarkers(marks);
+
     if (forceRange) {
-      const from = new Date(last.time + 'T00:00:00Z');
-      from.setUTCMonth(from.getUTCMonth() - state.btcMonths);
-      this.btc.chart.timeScale().setVisibleRange({ from: from.toISOString().slice(0, 10), to: last.time });
+      if (is4h) {
+        this.btc.chart.timeScale().setVisibleRange({ from: last.time - 24 * 86400, to: last.time });
+      } else {
+        const from = new Date(last.time + 'T00:00:00Z');
+        from.setUTCMonth(from.getUTCMonth() - state.btcMonths);
+        this.btc.chart.timeScale().setVisibleRange({ from: from.toISOString().slice(0, 10), to: last.time });
+      }
     }
   }
 
@@ -508,7 +611,7 @@ export class ChartManager {
       this.mnav.second.setData(series('mNavEntVal'));
       this.mnav.main.setMarkers(
         sMain.some((p) => p.time === '2026-07-23')
-          ? [{ time: '2026-07-23', position: 'aboveBar', shape: 'arrowDown', color: css('--text'), text: '官网改定义' }]
+          ? [{ time: '2026-07-23', position: 'aboveBar', shape: 'arrowDown', color: css('--text'), text: '改定义' }]
           : []
       );
     } else {
