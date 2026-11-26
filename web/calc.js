@@ -286,6 +286,7 @@ function fibGoldenPocket(bars, lookback = 90) { // 波段斐波那契与 0.618�
       fib500: at(0.5),
       gp618: at(0.618),
       gp660: at(0.66),
+      mid: (at(0.618) + at(0.66)) / 2,
       gpLow: at(0.66),
       gpHigh: at(0.618),
       fib786: at(0.786),
@@ -301,6 +302,7 @@ function fibGoldenPocket(bars, lookback = 90) { // 波段斐波那契与 0.618�
     fib500: at(0.5),
     gp618: at(0.618),
     gp660: at(0.66),
+    mid: (at(0.618) + at(0.66)) / 2,
     gpLow: at(0.618),
     gpHigh: at(0.66),
     fib786: at(0.786),
@@ -456,7 +458,7 @@ function rsiDivergence(bars, lr = 3) { // 最近摆动高低点 RSI(14) 顶底�
   return { type: 'none', label: '无明显背离', detail: `当前 RSI ${r.at(-1)?.toFixed(1) ?? '--'}`, time: null };
 }
 
-function tiaBtcSummary(dailyBars, livePrice, opts = {}) { // 汇总提阿非罗视频 7 大常用指标与盘面文字解读
+function tiaBtcSummary(dailyBars, livePrice, opts = {}) { // 提阿非罗常用盘面体系：小白白话解读 + 明确周期标注 + 关键价位地图
   if (!dailyBars || dailyBars.length < 30) return null;
   const p = livePrice || dailyBars.at(-1).close;
   const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
@@ -475,151 +477,162 @@ function tiaBtcSummary(dailyBars, livePrice, opts = {}) { // 汇总提阿非罗�
   const opens = keyOpens(dailyBars);
   const divD = rsiDivergence(dailyBars, 3);
   const div4h = opts.bars4h?.length >= 35 ? rsiDivergence(opts.bars4h, 3) : null;
-  const rsiD = rsi(dailyBars.map(b => b.close));
-  const rsi4 = opts.bars4h?.length >= 20 ? rsi(opts.bars4h.map(b => b.close)) : null;
 
   const items = [];
 
-  // 1. 道氏结构 + 前高前低流动性 + 2B 假突破猎杀
+  // 1. 大方向与真假突破（标注：日线 + 4小时线）
   if (struct) {
     const activeSweep = struct4h?.recentSweep || struct.recentSweep;
-    const sweepScope = struct4h?.recentSweep ? '4H' : '日线';
-    const sweepTxt = activeSweep
+    const sweepScope = struct4h?.recentSweep ? '4小时线' : '日线';
+    const dirTitle =
+      struct.code === 'bull' ? '稳步往上走' :
+      struct.code === 'bear' ? '还在往下走' :
+      struct.code === 'converge' ? '波动收窄，快选方向' : '区间来回拉锯';
+    const dirExplain =
+      struct.code === 'bull' ? '日线每次回调的低点都在抬高，整体买盘占优。' :
+      struct.code === 'bear' ? '日线每次反弹的高点都比前一次低，下跌趋势还没扭转。' :
+      '日线在高低区间内来回震荡，暂时没有单边大方向。';
+    const shortExplain = struct4h
+      ? `短线（4小时线）目前${struct4h.code === 'bull' ? '小幅反弹向上' : struct4h.code === 'bear' ? '也在同步走弱' : '横盘整理'}。`
+      : '';
+    const sweepExplain = activeSweep
       ? activeSweep.type === 'bull_sweep'
-        ? `${sweepScope}出现向下假突破收回（刺破前低 ${fmt(activeSweep.level)} 后收回，扫多头止损）`
-        : `${sweepScope}出现向上假突破回落（刺破前高 ${fmt(activeSweep.level)} 后跌回，扫空头止损）`
-      : `近几根 K 线未见明显 2B 假突破；上方前高流动性 ${fmt(struct.abovePool.price)}（${diffPct(struct.abovePool.price)}），下方前低流动性 ${fmt(struct.belowPool.price)}（${diffPct(struct.belowPool.price)}）`;
+        ? `${sweepScope}刚跌破前低 ${fmt(activeSweep.level)} 后又拉了回来（俗称「破底翻」，下方有买盘承接）。`
+        : `${sweepScope}刚冲过前高 ${fmt(activeSweep.level)} 后又跌了回来（俗称「假突破」，追高容易被套）。`
+      : `往下先看前低防守位 ${fmt(struct.belowPool.price)}（${diffPct(struct.belowPool.price)}），往上留意前高压力位 ${fmt(struct.abovePool.price)}（${diffPct(struct.abovePool.price)}）。`;
+
+    const tfs = [{ label: '日线', cls: 'day' }];
+    if (struct4h) tfs.push({ label: '4小时线', cls: 'h4' });
+
     items.push({
       key: 'structure',
-      title: '市场结构 & 流动性猎杀',
-      badge: activeSweep ? (activeSweep.type === 'bull_sweep' ? '破底翻收回' : '假突破回落') : struct.label,
+      title: '大方向怎么走？',
+      tfs,
+      badge: activeSweep ? (activeSweep.type === 'bull_sweep' ? '刚现「破底翻」' : '刚现「假突破」') : (struct.code === 'bull' ? '买方占优' : struct.code === 'bear' ? '卖方占优' : '多空拉锯'),
       tone: activeSweep ? (activeSweep.type === 'bull_sweep' ? 'bull' : 'bear') : struct.code === 'bull' ? 'bull' : struct.code === 'bear' ? 'bear' : 'neutral',
-      value: `前高 ${fmt(struct.abovePool.price)} / 前低 ${fmt(struct.belowPool.price)}`,
-      detail: `${struct.label}${struct4h ? ` · 4H ${struct4h.label}` : ''}。${sweepTxt}。`,
+      value: dirTitle,
+      detail: `${dirExplain}${shortExplain}${sweepExplain}`,
+      term: '对应概念：道氏高低点结构 · 2B 假突破',
     });
   }
 
-  // 2. 斐波那契 0.618–0.66 黄金口袋
+  // 2. 反弹/回调的黄金关口（标注：日线 · 近3月波段）
   if (fib) {
     const inPocket = p >= fib.gpLow && p <= fib.gpHigh;
-    let status, tone = 'neutral';
+    const midGp = (fib.gpLow + fib.gpHigh) / 2;
+    let status, tone = 'neutral', explain;
     if (fib.dir === 'up') {
-      if (inPocket) { status = '正测试回调黄金口袋'; tone = 'warn'; }
-      else if (p > fib.gpHigh) { status = '位于黄金口袋上方'; tone = 'bull'; }
-      else { status = '跌破 0.66 深回调区'; tone = 'bear'; }
+      if (inPocket) { status = '正考验黄金支撑'; tone = 'warn'; }
+      else if (p > fib.gpHigh) { status = '稳在黄金支撑上方'; tone = 'bull'; }
+      else { status = '已跌破黄金支撑'; tone = 'bear'; }
+      explain = `这波日线从 ${fmt(fib.swingLow.price)} 涨到 ${fmt(fib.swingHigh.price)} 后，回吐约三分之二涨幅的支撑带就在这里（距现价 ${diffPct(midGp)}），通常是买盘容易接力的位置。`;
     } else {
-      if (inPocket) { status = '正测试反弹黄金口袋'; tone = 'warn'; }
-      else if (p > fib.gpHigh) { status = '已收复反弹 0.66'; tone = 'bull'; }
-      else { status = '受制于反弹 0.618 下方'; tone = 'bear'; }
+      if (inPocket) { status = '正撞上黄金压力'; tone = 'warn'; }
+      else if (p > fib.gpHigh) { status = '已越过黄金压力'; tone = 'bull'; }
+      else { status = '还在黄金压力下方'; tone = 'bear'; }
+      explain = `这波日线从 ${fmt(fib.swingHigh.price)} 跌到 ${fmt(fib.swingLow.price)} 后，往上修复约三分之二跌幅的位置就在这里（距现价 ${diffPct(midGp)}），套牢盘常在此处卖出，是反弹最关键的一道坎。`;
     }
     items.push({
       key: 'fib',
-      title: '0.618–0.66 黄金口袋',
+      title: fib.dir === 'up' ? '往下回调哪儿有支撑？' : '往上反弹哪儿容易卡住？',
+      tfs: [{ label: '日线 · 近3月波段', cls: 'day' }],
       badge: status,
       tone,
       value: `${fmt(fib.gpLow)} – ${fmt(fib.gpHigh)}`,
-      detail: `按近 90 日${fib.dir === 'up' ? `低点 ${fmt(fib.swingLow.price)} → 高点 ${fmt(fib.swingHigh.price)} 回调` : `高点 ${fmt(fib.swingHigh.price)} → 低点 ${fmt(fib.swingLow.price)} 反弹`}测算：0.5 中轴 ${fmt(fib.fib500)}，0.786 位 ${fmt(fib.fib786)}，1.13 扩展位 ${fmt(fib.ext113)}。`,
+      detail: explain,
+      term: '对应概念：斐波那契 0.618–0.66 黄金口袋',
     });
   }
 
-  // 3. 筹码分布盘整区 POC / VAH / VAL
+  // 3. 大家买卖最集中的价格（标注：日线 · 近3月筹码）
   if (vp) {
     let vpBadge, vpTone = 'neutral', vpNote;
     if (p > vp.vah) {
-      vpBadge = '脱离价值区上沿 (VAH 上方)';
+      vpBadge = '站上密集区上方';
       vpTone = 'bull';
-      vpNote = `站上 70% 筹码上沿 VAH，回踩 ${fmt(vp.vah)} 不破偏强；若跌回 VAH 内则防假突破回测 POC ${fmt(vp.poc)}。`;
+      vpNote = `现价已站到大多数人的换手成本区（${fmt(vp.val)}–${fmt(vp.vah)}）上方，回踩不跌回 ${fmt(vp.vah)} 就算强势。`;
     } else if (p < vp.val) {
-      vpBadge = '跌出价值区下沿 (VAL 下方)';
+      vpBadge = '跌在密集区下方';
       vpTone = 'bear';
-      vpNote = `位于 70% 筹码下沿 VAL 下方；若迅速收回 ${fmt(vp.val)} 之上构成下沿假突破，第一目标常看 POC ${fmt(vp.poc)}。`;
-    } else if (p >= vp.poc) {
-      vpBadge = '盘整价值区上半区';
-      vpNote = `处于 VAL–VAH 价值区内、控制点 POC 上方；上沿阻力 VAH ${fmt(vp.vah)}（${diffPct(vp.vah)}），中心磁吸位 POC ${fmt(vp.poc)}。`;
+      vpNote = `过去三个月 70% 的成交都在 ${fmt(vp.val)}–${fmt(vp.vah)}。现价跌出了这片区域，往上涨回时容易遇到解套卖盘。`;
     } else {
-      vpBadge = '盘整价值区下半区';
-      vpNote = `处于 VAL–VAH 价值区内、控制点 POC 下方；中心磁吸位 POC ${fmt(vp.poc)}（${diffPct(vp.poc)}），下沿支撑 VAL ${fmt(vp.val)}。`;
+      vpBadge = '正在密集区换手';
+      vpNote = `过去三个月 70% 的成交都在 ${fmt(vp.val)}–${fmt(vp.vah)}，现价就在里面震荡，中心价 ${fmt(vp.poc)} 像磁铁一样容易反复吸引价格靠近。`;
     }
     items.push({
       key: 'vp',
-      title: '盘整区筹码 POC / VAH / VAL',
+      title: '大家成交最集中的价格在哪？',
+      tfs: [{ label: '日线 · 近3月筹码', cls: 'day' }],
       badge: vpBadge,
       tone: vpTone,
-      value: `POC ${fmt(vp.poc)}`,
-      detail: `VAH ${fmt(vp.vah)} · POC ${fmt(vp.poc)} · VAL ${fmt(vp.val)}（近 90 日 70% 成交密集区）。${vpNote}`,
+      value: `${fmt(vp.poc)} 附近`,
+      detail: vpNote,
+      term: '对应概念：筹码密集控制点 POC 与价值区',
     });
   }
 
-  // 4. Vegas 维加斯隧道 (EMA 144/169)
-  if (vegasD) {
-    const dState = p > vegasD.top ? '上方' : p < vegasD.bot ? '下方' : '隧道内';
-    const hState = vegas4h ? (p > vegas4h.top ? '上方' : p < vegas4h.bot ? '下方' : '隧道内') : null;
-    const bothBull = p > vegasD.top && (!vegas4h || p > vegas4h.top);
-    const bothBear = p < vegasD.bot && (!vegas4h || p < vegas4h.bot);
+  // 4. 长短期成本线与周末缺口（标注：日线 + 周线 + 期货日线）
+  if (vegasD && opens) {
+    const cg = gaps.cmeNearest;
+    const aboveD = p > vegasD.top, belowD = p < vegasD.bot;
+    const aboveW = p >= opens.weeklyOpen;
+    const activeDiv = (div4h && div4h.type !== 'none' ? { ...div4h, tf: '4小时线' } : null) || (divD && divD.type !== 'none' ? { ...divD, tf: '日线' } : null);
+
+    const tfs = [
+      { label: '日线', cls: 'day' },
+      { label: '周线', cls: 'week' },
+    ];
+    if (cg) tfs.push({ label: '期货日线', cls: 'h4' });
+
     items.push({
-      key: 'vegas',
-      title: 'Vegas 维加斯隧道 (144/169)',
-      badge: bothBull ? '双周期隧道上方' : bothBear ? '双周期隧道下方' : `日线${dState}${hState ? ` · 4H${hState}` : ''}`,
-      tone: bothBull ? 'bull' : bothBear ? 'bear' : 'warn',
-      value: `日线 ${fmt(vegasD.bot)}–${fmt(vegasD.top)}`,
-      detail: `日线 EMA144/169 位于 ${fmt(vegasD.bot)}–${fmt(vegasD.top)}（过滤线 EMA12 ${fmt(vegasD.ema12)}）` +
-        (vegas4h ? `；4H 隧道位于 ${fmt(vegas4h.bot)}–${fmt(vegas4h.top)}` : '') +
-        (vegasD.ema576 && vegasD.ema676 ? `；大级别 576/676 位于 ${fmt(Math.min(vegasD.ema576, vegasD.ema676))}–${fmt(Math.max(vegasD.ema576, vegasD.ema676))}。` : '。'),
+      key: 'levels',
+      title: '均价分界线 & 周末跳空缺口',
+      tfs,
+      badge: aboveD && aboveW ? '站稳均价上方' : belowD && !aboveW ? '压在均价下方' : '长短分界交织',
+      tone: aboveD && aboveW ? 'bull' : belowD && !aboveW ? 'bear' : 'warn',
+      value: `半年线 ${fmt(vegasD.bot)} · 周开盘 ${fmt(opens.weeklyOpen)}`,
+      detail:
+        `日线半年趋势带在 ${fmt(vegasD.bot)}（现价在它${aboveD ? '上方，中长期偏强' : belowD ? '下方，中长期偏弱' : '附近争夺'}）` +
+        (vegas4h ? `，4小时线趋势带在 ${fmt(vegas4h.bot)}；` : `；`) +
+        `周线本周开盘价 ${fmt(opens.weeklyOpen)}（${aboveW ? '本周买方占优' : '本周卖方占优'}）。` +
+        (cg ? `另外期货日线在 ${fmt(cg.low)}–${fmt(cg.high)} 留有周末未补缺口（距现价 ${diffPct(cg.mid)}），常有回补引力。` : '') +
+        (activeDiv ? `${activeDiv.tf}出现${activeDiv.type === 'bull_div' ? '跌势放缓（底背离）' : '涨势放缓（顶背离）'}迹象。` : ''),
+      term: '对应概念：Vegas 隧道 · 周线开盘价 · CME 缺口',
     });
   }
 
-  // 5. CME 期货缺口 & 日线 FVG 失衡区
-  const cg = gaps.cmeNearest;
-  const fg = gaps.fvgNearest;
-  items.push({
-    key: 'gaps',
-    title: 'CME 期货缺口 & FVG 失衡区',
-    badge: cg ? `${cg.dir === 'above' ? '上方' : '下方'}有未补 CME 缺口` : fg ? '存在日线 FVG' : '邻近无明显缺口',
-    tone: cg ? 'warn' : 'neutral',
-    value: cg ? `${fmt(cg.low)}–${fmt(cg.high)}` : fg ? `FVG ${fmt(fg.low)}–${fmt(fg.high)}` : '近期缺口已回补',
-    detail: (cg ? `最近未回补 CME 期货缺口：${fmt(cg.low)}–${fmt(cg.high)}（${cg.time}，距现价 ${diffPct(cg.mid)}，具磁吸参考）。` : '近半年 CME 期货无邻近未补跳空缺口。') +
-      (fg ? ` 最近未补日线${fg.type === 'bull' ? '多头' : '空头'} FVG：${fmt(fg.low)}–${fmt(fg.high)}（${fg.time}）。` : ''),
-  });
+  // 生成一目了然的「关键价位尺」节点（从低到高排序）
+  const rawPoints = [
+    struct?.belowPool?.price ? { label: '前低防守', tf: '日线', price: struct.belowPool.price, kind: 'support' } : null,
+    gaps?.cmeNearest ? { label: '周末缺口', tf: '期货日线', price: gaps.cmeNearest.mid, kind: 'gap' } : null,
+    { label: '当前现价', tf: '实时', price: p, kind: 'current' },
+    opens?.weeklyOpen ? { label: '本周开盘', tf: '周线', price: opens.weeklyOpen, kind: 'week' } : null,
+    vegasD ? { label: '半年趋势带', tf: '日线', price: vegasD.ema144, kind: 'vegas' } : null,
+    fib ? { label: fib.dir === 'up' ? '黄金支撑' : '黄金关口', tf: '日线', price: (fib.gpLow + fib.gpHigh) / 2, kind: 'fib' } : null,
+    vp ? { label: '成交最密区', tf: '日线', price: vp.poc, kind: 'vp' } : null,
+    struct?.abovePool?.price ? { label: '前高压力', tf: '日线', price: struct.abovePool.price, kind: 'resist' } : null,
+  ].filter(x => x && x.price > 0).sort((a, b) => a.price - b.price);
 
-  // 6. 周线 / 月线 / 年线开盘价锚点
-  if (opens) {
-    const aboveW = p >= opens.weeklyOpen, aboveM = p >= opens.monthlyOpen;
-    items.push({
-      key: 'opens',
-      title: '周 / 月 / 年开盘价分水岭',
-      badge: aboveW && aboveM ? '站稳周·月开盘上方' : !aboveW && !aboveM ? '位于周·月开盘下方' : aboveW ? '周线上涨 · 月线水下' : '月线上涨 · 本周回落',
-      tone: aboveW && aboveM ? 'bull' : !aboveW && !aboveM ? 'bear' : 'neutral',
-      value: `周开 ${fmt(opens.weeklyOpen)} (${diffPct(opens.weeklyOpen)})`,
-      detail: `本周开盘 ${fmt(opens.weeklyOpen)}（${p >= opens.weeklyOpen ? '多头占优' : '偏弱压制'}），本月开盘 ${fmt(opens.monthlyOpen)}（${diffPct(opens.monthlyOpen)}），今年开盘 ${fmt(opens.yearlyOpen)}（${diffPct(opens.yearlyOpen)}）。`,
-    });
-  }
+  const minMap = rawPoints[0]?.price || p * 0.9;
+  const maxMap = rawPoints.at(-1)?.price || p * 1.1;
+  const spanMap = Math.max(1, maxMap - minMap);
+  const mapPoints = rawPoints.map(pt => ({
+    ...pt,
+    posPct: Math.min(98, Math.max(2, ((pt.price - minMap) / spanMap) * 96 + 2)),
+    diffText: pt.kind === 'current' ? '当前位置' : diffPct(pt.price),
+  }));
 
-  // 7. RSI 背离与量能确认
-  const activeDiv = (div4h && div4h.type !== 'none' ? { ...div4h, tf: '4H' } : null) || (divD && divD.type !== 'none' ? { ...divD, tf: '日线' } : null);
-  const volAvg20 = sma(dailyBars.map(b => b.volume), 20).at(-2) || 1;
-  const volRatio = dailyBars.at(-1).volume / volAvg20;
-  items.push({
-    key: 'momentum',
-    title: '动量背离 & 量价配合',
-    badge: activeDiv ? `${activeDiv.tf}${activeDiv.label}` : `日 RSI ${rsiD?.toFixed(0) ?? '--'}${rsi4 != null ? ` · 4H ${rsi4.toFixed(0)}` : ''}`,
-    tone: activeDiv ? (activeDiv.type === 'bull_div' ? 'bull' : 'bear') : 'neutral',
-    value: `RSI ${rsiD?.toFixed(1) ?? '--'} · 量比 ${volRatio.toFixed(2)}x`,
-    detail: (activeDiv ? `${activeDiv.tf}${activeDiv.label}（${activeDiv.detail}）。` : `日线与 4H 近期未见明显 RSI 顶底背离${rsi4 != null ? `（4H RSI ${rsi4.toFixed(1)}）` : ''}。`) +
-      ` 当日成交额约为前 20 日均量的 ${volRatio.toFixed(2)} 倍。`,
-  });
-
-  const headline = [
-    struct ? `BTC 当前呈${struct.label}` : '',
-    vp ? (p > vp.vah ? `脱离盘整价值区上沿 VAH (${fmt(vp.vah)})` : p < vp.val ? `位于价值区下沿 VAL (${fmt(vp.val)}) 下方` : `处于盘整价值区内（POC ${fmt(vp.poc)}）`) : '',
-    vegasD ? `日线 Vegas 隧道${p > vegasD.top ? '上方托底' : p < vegasD.bot ? '下方承压' : '区间内测试'}` : '',
-    fib ? `0.618–0.66 黄金口袋位于 ${fmt(fib.gpLow)}–${fmt(fib.gpHigh)}` : '',
-    struct ? `上方留意前高 ${fmt(struct.abovePool.price)}、下方留意前低 ${fmt(struct.belowPool.price)} 的关键位反应` : '',
-  ].filter(Boolean).join('，') + '。';
+  // 一句话白话总结
+  const dirWord = struct?.code === 'bull' ? '大方向往上走（日线）' : struct?.code === 'bear' ? '大方向还在往下走（日线）' : '大方向在区间里拉锯（日线）';
+  const supportWord = struct?.belowPool?.price ? `下方最近的防守位在 ${fmt(struct.belowPool.price)}` : '';
+  const resistWord = fib ? `${fib.dir === 'up' ? '回调重点看' : '往上反弹的关键大坎在'} ${fmt(fib.gpLow)}–${fmt(fib.gpHigh)}（黄金区间）` : '';
+  const headline = [dirWord, `现价 ${fmt(p)}`, supportWord, resistWord].filter(Boolean).join('，') + '。';
 
   return {
     price: p,
     headline,
     items,
+    mapPoints,
     struct,
     struct4h,
     fib,

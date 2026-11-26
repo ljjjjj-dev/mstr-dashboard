@@ -38,17 +38,22 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = (n) => (n == null || Number.isNaN(n) ? '--' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const money0 = (n) => (n == null || Number.isNaN(n) ? '--' : '$' + Math.round(Number(n)).toLocaleString('en-US'));
+const heroMoneyHtml = (n) => {
+  if (n == null || Number.isNaN(n)) return '--';
+  const [whole, dec] = Number(n).toFixed(2).split('.');
+  return `<span class="prefix">$</span>${Number(whole).toLocaleString('en-US')}<span class="dec">.${dec}</span>`;
+};
 const pct = (n) => (n == null || Number.isNaN(n) ? '--' : (n > 0 ? '+' : '') + Number(n).toFixed(1) + '%');
 const dirClass = (n) => (n > 0 ? 'up' : n < 0 ? 'down' : '');
 const toNum = (v) => (typeof v === 'number' ? v : Number(String(v ?? '').replace(/,/g, '')));
 const dateCn = (d) => String(d ?? '').replaceAll('-', '/');
 const bj = (t, opts) => new Date(t * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, ...opts });
 const hm = (t) => bj(t, { hour: '2-digit', minute: '2-digit' });
-const countdown = (s) => (s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m` : `${Math.max(1, Math.ceil(s / 60))}m`);
+const countdown = (s) => (s >= 3600 ? `${Math.floor(s / 3600)}小时${Math.floor((s % 3600) / 60)}分` : `${Math.max(1, Math.ceil(s / 60))}分钟`);
 
 const TAB_TITLES = {
-  overview: '总览看板',
-  charts: 'K 线行情',
+  overview: '今日总览',
+  charts: 'K 线图解',
   valuation: '估值与持币',
   strategy: '持仓与计划',
   compare: '对比与定投',
@@ -56,30 +61,29 @@ const TAB_TITLES = {
 };
 
 const TERMS = {
-  tia: '汇总提阿非罗视频常用 7 项看盘维度：① 道氏高低点结构与前高/前低止损流动性池、2B 假突破（插针刺破关键位后收回）；② 波段斐波那契 0.618–0.66 黄金口袋（高频回调支撑/反弹阻力共振带）；③ 盘整区筹码分布 POC（最大成交量磁吸位）与 70% 价值区上下沿 VAH / VAL；④ Vegas 维加斯隧道（日线与 4H 的 EMA 144/169 动态趋势带）；⑤ CME 比特币期货周末跳空未回补缺口与日线 FVG 失衡区；⑥ 周线/月线/年线开盘价多空分水岭；⑦ RSI(14) 摆动高低点顶底背离。所有文字仅作客观位置拆解，等待关键位价格行为确认，不构成买卖建议。',
-  range: '近一年最高与最低之间的相对百分位（0 最低，100 最高）。位置低不等于便宜，需结合趋势综合观察。',
-  ma: '过去 N 个交易日收盘价算术平均。50 日看中期，100 日看半年，200 日看长期趋势。',
-  vola: '近 60 个交易日单日涨跌幅绝对值的均值；Beta 表示比特币每涨跌 1% 时 MSTR 的历史平均同向变动倍数。',
-  fear: '币圈情绪指数（0 极度恐惧 – 100 极度贪婪，来自 Strategy 官网）与美股 VIX 恐慌指数。仅反映市场气氛，不预测拐点。',
-  pershare: '公司持币总数 ÷ 调整后股数，衡量增发买币后每股实际含币量是在增厚还是稀释（未扣除债务）。',
-  qdii: '国内公募发行的海外指数场外基金（A 类收申购费适合长拿，C 类按日计提服务费适合短持）。受外汇额度影响常限购或暂停。',
-  mag7: '以选定区间起点收盘价归零，横向对比 MSTR 与美股七姐妹、各行业龙头、指数及比特币的累计涨跌幅。',
-  cost: '200 周均价约为比特币过去 4 年均线；全网实现均价（Realized Price）为链上最后移动价格均值。历史上均曾短暂跌破。',
-  dca: '假设每月首个交易日收盘固定投入相同美元金额，计算历史定投均价、当前盈亏与途中最大浮亏。',
-  rsi: '14 周期相对强弱指数（0–100），70 以上偏热、30 以下偏冷，单边趋势中可长期钝化。',
-  cross: '短期均线上穿长期均线为金叉，下穿为死叉，属于滞后趋势确认指标。',
-  vol: '当日（或当周）成交量相对此前 20 周期均量的倍数，用于观察关键位置是否放量。',
-  corr: '60 日相关系数越接近 1 代表与比特币越同向联动；Beta 为相对比特币的波动放大倍数。',
-  mnav: 'Strategy 官网现行口径：股价 ÷ 扣除债务与优先股后的每股净持币美元价值。大于 1 为溢价，小于 1 为折价（2026/07/23 前后口径不同）。',
+  tia: '这里把价格行为看盘最常讲的几件事，翻译成了不学金融也能懂的白话：① 大方向与假突破（日线看几个月的大方向、4小时线看最近几天有没有冲高回落的假突破）；② 黄金关口 0.618–0.66（一波大涨或大跌回吐约三分之二的位置，最容易遇到买盘或卖压）；③ 成交最密区 POC（最近三个月大家换手最多的价格，像磁铁一样有吸引力）；④ 半年趋势带 Vegas、周线开盘价与期货周末跳空缺口。每张卡片都标明了是日线、周线还是 4 小时线。',
+  range: '把过去一年（日线）最低价算 0 分、最高价算 100 分，看看今天在什么位置。分数低不代表一定便宜，还要结合大方向看。',
+  ma: '均线就是过去多少天收盘价的平均成本。50 日均线代表近两个多月平均成本，200 日均线代表近一年平均成本。现价站在均线上方通常说明趋势较强，压在下方说明偏弱。',
+  vola: '统计过去 60 个交易日（日线）平均每天上下晃动百分之几。MSTR 的脾气比普通股票大得多，心里先有个底，跌起来才不慌。',
+  fear: '情绪指数（日线）0 分代表极度恐惧、100 分代表极度贪婪；美股 VIX 指数越高说明大家越紧张。情绪只代表气氛，极度恐惧不等于马上见底。',
+  pershare: '公司手里的比特币总数 ÷ 总股数。只要这条线往上走，说明买一股对应的比特币在变多；往下走说明增发股票比买币更快。',
+  qdii: '国内基金公司发行的海外指数基金，用人民币在支付宝、天天基金就能买，不用开美股账户。A 类适合拿一年以上，C 类适合拿几个月。',
+  mag7: '把所有资产在同一起点归零，按日线比较这段时间谁涨得多、谁跌得多。“七姐妹”指苹果、微软、谷歌、亚马逊、英伟达、Meta 和特斯拉。',
+  cost: '比特币 200 周均线（周线级别，约过去 4 年的平均价）常被视作牛熊长周期参考底线，但历史上极端行情也曾短暂跌破过。',
+  dca: '假设不管涨跌，每个月第一个交易日收盘固定买一笔，用真实历史日线算算到现在平均成本是多少、赚了还是亏了。',
+  rsi: '衡量最近 14 根 K 线买方和卖方谁力气更大（0–100 分）。日线看近几周，周线看近几个月；高于 70 算偏热，低于 30 算偏冷。',
+  cross: '短期均线上穿长期均线叫金叉，下穿叫死叉，属于慢半拍的趋势确认信号。',
+  vol: '今天（日线）成交量是前 20 天平均成交量的多少倍。放大说明今天买卖很活跃。',
+  mnav: '微策略的核心资产就是比特币。官网溢价倍数（mNAV）看的是：买它的股票，比直接买它手里的比特币贵了多少。比如 1.20 倍就是贵了 20%（溢价），0.95 倍就是打了 95 折（折价）。',
 };
 
 const RULES = {
-  priceBelow: { label: (v) => `价格 ≤ ${money(Number(v))}` },
-  priceAbove: { label: (v) => `价格 ≥ ${money(Number(v))}` },
-  drawdown: { label: (v) => `高点回撤 ≥ ${v}%` },
-  belowMa200: { label: (v) => `连续 ${v} 日低于 200 日线` },
-  mnavBelow: { label: (v) => `官网 mNAV ≤ ${Number(v).toFixed(2)}x` },
-  mnavAbove: { label: (v) => `官网 mNAV ≥ ${Number(v).toFixed(2)}x` },
+  priceBelow: { label: (v) => `价格跌到 ≤ ${money(Number(v))}` },
+  priceAbove: { label: (v) => `价格涨到 ≥ ${money(Number(v))}` },
+  drawdown: { label: (v) => `从高点回撤 ≥ ${v}%` },
+  belowMa200: { label: (v) => `连续 ${v} 天低于 200 日线` },
+  mnavBelow: { label: (v) => `官网溢价 ≤ ${Number(v).toFixed(2)} 倍` },
+  mnavAbove: { label: (v) => `官网溢价 ≥ ${Number(v).toFixed(2)} 倍` },
   date: { label: (v) => `到达 ${dateCn(v)}` },
 };
 
@@ -155,7 +159,7 @@ function updateSyncBadge(mode) {
   const txt = $('syncText');
   if (!dot || !txt) return;
   dot.className = 'sync-dot ' + (mode === 'saving' ? 'saving' : mode === 'local' ? 'local' : '');
-  txt.textContent = mode === 'saving' ? '正在保存…' : mode === 'local' ? '浏览器缓存' : '本地已同步';
+  txt.textContent = mode === 'saving' ? '正在保存…' : mode === 'local' ? '浏览器缓存' : '本机已自动保存';
 }
 
 function persistUserData(immediate = false) {
@@ -205,7 +209,7 @@ function applyTheme(theme) {
   const isDark = S.userData.prefs.theme === 'dark';
   document.documentElement.classList.toggle('dark', isDark);
   const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', isDark ? '#0B0B0D' : '#F5F5F7');
+  if (metaTheme) metaTheme.setAttribute('content', isDark ? '#000000' : '#F5F5F7');
   const icon = $('themeIcon');
   if (icon) {
     icon.innerHTML = isDark
@@ -277,7 +281,7 @@ function setChartLayout(layout) {
   $('chartLayoutSeg').querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.clayout === layout));
   $('mstrChartSection').hidden = layout === 'btc';
   $('btcChartSection').hidden = layout === 'mstr';
-  $('btcChartSection').style.marginTop = layout === 'dual' ? '13px' : '0';
+  $('btcChartSection').style.marginTop = layout === 'dual' ? '20px' : '0';
   $('chartsDualWrap').classList.toggle('chart-split-dual', layout === 'dual');
 }
 
@@ -339,13 +343,13 @@ function showOhlc(id, b, prev, view, isBtc) {
   const chg = (b.close / (prev || b.open) - 1) * 100;
   const tLabel =
     view === '4h'
-      ? bj(b.time, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' (4H)'
+      ? bj(b.time, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) + '（4小时线）'
       : view === 'week'
-      ? `${b.time} 周`
-      : b.time;
+      ? `${b.time} 当周（周线）`
+      : `${b.time}（日线）`;
   const fmtP = isBtc ? money0 : money;
-  const volStr = isBtc ? `量 $${(b.volume / 1e8).toFixed(1)}亿` : `量 ${(b.volume / 1e6).toFixed(1)}M`;
-  el.innerHTML = `<b>${tLabel}</b> · 开 <b>${fmtP(b.open)}</b> · 高 <b>${fmtP(b.high)}</b> · 低 <b>${fmtP(b.low)}</b> · 收 <b>${fmtP(b.close)}</b> <span class="${dirClass(chg)}">(${pct(chg)})</span> · ${volStr}`;
+  const volStr = isBtc ? `成交额 $${(b.volume / 1e8).toFixed(1)}亿` : `成交 ${(b.volume / 1e6).toFixed(1)}百万股`;
+  el.innerHTML = `<b>${tLabel}</b> · 开盘 <b>${fmtP(b.open)}</b> · 最高 <b>${fmtP(b.high)}</b> · 最低 <b>${fmtP(b.low)}</b> · 收盘 <b>${fmtP(b.close)}</b> <span class="${dirClass(chg)}">(${pct(chg)})</span> · ${volStr}`;
 }
 
 function renderBand() {
@@ -365,7 +369,7 @@ function renderBand() {
     [0, `${hm(p.pre.start)}<em> 盘前</em>`],
     [frac(p.pre.end), `${hm(p.regular.start)}<em> 开盘</em>`],
     [frac(p.regular.end), `${hm(p.regular.end)}<em> 收盘</em>`],
-    [100, `${hm(p.post.end)}<em> 盘后完</em>`],
+    [100, `${hm(p.post.end)}<em> 盘后结束</em>`],
   ]
     .map(([x, t]) => `<span style="left:${x}%">${t}</span>`)
     .join('');
@@ -388,10 +392,10 @@ function renderStatus() {
     chip.textContent = S.session.label;
   }
   let next = '';
-  if (S.session.key === 'wait' || S.session.key === 'pre') next = `距开盘 ${countdown(p.regular.start - now)} · `;
-  else if (S.session.key === 'regular') next = `距收盘 ${countdown(p.regular.end - now)} · `;
+  if (S.session.key === 'wait' || S.session.key === 'pre') next = `距美股开盘 ${countdown(p.regular.start - now)} · `;
+  else if (S.session.key === 'regular') next = `距美股收盘 ${countdown(p.regular.end - now)} · `;
   const ago = Math.round((Date.now() - S.loadedAt) / 1000);
-  $('updated').textContent = S.fail ? '暂取不到行情，展示缓存' : `${next}${ago < 5 ? '刚刚更新' : ago + 's 前'}`;
+  $('updated').textContent = S.fail ? '暂取不到最新行情，显示上次缓存' : `${next}${ago < 5 ? '刚刚更新' : ago + ' 秒前更新'}`;
 }
 
 function renderHeader() {
@@ -402,7 +406,7 @@ function renderHeader() {
   const chg = (price / prev - 1) * 100;
 
   const priceEl = $('price');
-  priceEl.textContent = money(price);
+  priceEl.innerHTML = heroMoneyHtml(price);
   priceEl.className = 'hero-figure tabular ' + dirClass(chg);
   if (S.prevPrice != null && S.prevPrice !== price) {
     priceEl.classList.remove('flash');
@@ -416,7 +420,7 @@ function renderHeader() {
   chgBadge.className = 'badge ' + (chg > 0 ? 'badge-up' : chg < 0 ? 'badge-down' : 'badge-neutral');
 
   $('priceLabel').textContent =
-    (S.session.key === 'regular' ? '盘中 · ' : '收盘 · ') +
+    (S.session.key === 'regular' ? '盘中实时 · ' : '最近收盘 · ') +
     bj(meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
   const e = S.ext;
@@ -450,20 +454,45 @@ function renderTiaPanels() {
   const btcChg = (S.btcPrice / btcPrev - 1) * 100;
   const ovBadge = $('tiaOvPrice');
   if (ovBadge) {
-    ovBadge.textContent = `BTC ${money0(S.btcPrice)} (${pct(btcChg)})`;
+    ovBadge.textContent = `现价 ${money0(S.btcPrice)} (${pct(btcChg)})`;
   }
 
+  const trackEl = $('tiaOvTrack');
+  const nodesEl = $('tiaOvNodes');
+  if (trackEl && nodesEl && S.tia.mapPoints?.length) {
+    trackEl.innerHTML = S.tia.mapPoints
+      .map((pt) => `<span class="price-map-dot ${pt.kind === 'current' ? 'current' : ''}" style="left:${pt.posPct.toFixed(1)}%" title="${esc(pt.label)} ${money0(pt.price)}"></span>`)
+      .join('');
+    nodesEl.innerHTML = S.tia.mapPoints
+      .map(
+        (pt) => `<div class="map-chip ${pt.kind === 'current' ? 'current' : ''}">
+          <div class="map-chip-top"><span>${esc(pt.label)}</span><span>${esc(pt.tf)}</span></div>
+          <div class="map-chip-price">${money0(pt.price)}</div>
+          <div class="map-chip-diff">${esc(pt.diffText)}</div>
+        </div>`
+      )
+      .join('');
+  }
+
+  const tfClassMap = { day: 'tf-day', week: 'tf-week', h4: 'tf-h4', live: 'tf-live' };
   const cardsHtml = S.tia.items
-    .map(
-      (it) => `<div class="tia-item">
-        <div class="tia-item-head">
-          <span class="tia-item-title">${esc(it.title)}</span>
+    .map((it) => {
+      const tfPills = (it.tfs || [])
+        .map((t) => `<span class="tf-pill ${tfClassMap[t.cls] || 'tf-day'}">${esc(t.label)}</span>`)
+        .join('');
+      return `<div class="tia-cell">
+        <div class="tia-cell-head">
+          <div class="tia-cell-title-group">
+            <span class="tia-cell-title">${esc(it.title)}</span>
+            ${tfPills}
+          </div>
           <span class="tia-tone ${it.tone}">${esc(it.badge)}</span>
         </div>
-        <div class="tia-item-val tabular">${esc(it.value)}</div>
-        <div class="tia-item-desc">${esc(it.detail)}</div>
-      </div>`
-    )
+        <div class="tia-cell-val tabular">${esc(it.value)}</div>
+        <p class="tia-cell-desc">${esc(it.detail)}</p>
+        ${it.term ? `<div class="tia-cell-term">${esc(it.term)}</div>` : ''}
+      </div>`;
+    })
     .join('');
 
   for (const [hId, gId] of [
@@ -478,18 +507,18 @@ function renderTiaPanels() {
 }
 
 function forceWords(r) {
-  if (r >= 70) return ['多头偏热', `日 RSI ${r.toFixed(0)}（>70 强势区）`];
-  if (r >= 55) return ['多头占优', `日 RSI ${r.toFixed(0)}（50 上方偏强）`];
-  if (r > 45) return ['多空均衡', `日 RSI ${r.toFixed(0)}（围绕 50 震荡）`];
-  if (r > 30) return ['空头占优', `日 RSI ${r.toFixed(0)}（50 下方偏弱）`];
-  return ['超跌偏冷', `日 RSI ${r.toFixed(0)}（<30 弱势区）`];
+  if (r >= 70) return ['买盘很热', '近期连涨较多，短线偏热'];
+  if (r >= 55) return ['买方占优', '近期涨的力道比跌的大'];
+  if (r > 45) return ['买卖均衡', '近期涨跌力道差不多'];
+  if (r > 30) return ['卖方占优', '近期跌的力道比涨的大'];
+  return ['买盘偏冷（超跌区）', '连跌后卖压较重，还没转强'];
 }
 
 function vixWords(v) {
-  if (v >= 35) return '恐慌';
-  if (v >= 25) return '偏紧';
-  if (v >= 15) return '常态';
-  return '平静';
+  if (v >= 35) return '非常恐慌';
+  if (v >= 25) return '偏紧张';
+  if (v >= 15) return '正常范围';
+  return '比较平静';
 }
 
 function renderReadoutAndOverview() {
@@ -508,16 +537,15 @@ function renderReadoutAndOverview() {
 
   const r = rsi(closes);
   const rw = rsi(toWeekly(bars).map((b) => b.close));
-  $('rsiV').innerHTML = `${r.toFixed(1)} <span style="color:var(--text-muted)">/</span> ${rw.toFixed(1)}`;
-  $('rsiT').textContent = `日线 ${r.toFixed(1)} · 周线 ${rw.toFixed(1)}（30–70 为常态区间）。`;
+  $('rsiV').innerHTML = `日 ${r.toFixed(0)} <span style="color:var(--text-muted)">/</span> 周 ${rw.toFixed(0)}`;
+  $('rsiT').textContent = `50 分是平衡线；高于 70 偏热，低于 30 偏冷。`;
 
   const avgVol = sma(bars.map((b) => b.volume), 20).at(-2);
   const ratio = bars.at(-1).volume / avgVol;
-  $('volV').textContent = ratio.toFixed(2) + 'x';
-  $('volT').textContent = `${bars.at(-1).time} 相对 20 日均量${S.session.key === 'regular' ? '（盘中未走完）' : ''}。`;
+  $('volV').textContent = ratio.toFixed(2) + ' 倍';
+  $('volT').textContent = `今天成交量是过去 20 个交易日平均的 ${ratio.toFixed(2)} 倍${S.session.key === 'regular' ? '（盘中未走完）' : ''}。`;
 
   const btcBars = S.btc.bars;
-  const btcChg = (S.btcPrice / btcBars.at(-2).close - 1) * 100;
   const byDate = new Map(btcBars.map((b) => [b.time, b.close]));
   const a = [];
   const b = [];
@@ -532,85 +560,82 @@ function renderReadoutAndOverview() {
   }
   const c = correlation(a, b);
   const bt = beta(a, b);
-  const pos = place < 33 ? '偏低' : place > 67 ? '偏高' : '中段';
+  const pos = place < 33 ? '偏低位置' : place > 67 ? '偏高位置' : '中间位置';
 
   const cost = Number(S.userData.position.cost);
   const mRows = [
-    { name: '52周高', price: hi },
-    { name: '52周低', price: lo },
-    { name: '50日线', price: ma50 },
-    { name: '100日线', price: ma100 },
-    { name: '200日线', price: ma200 },
+    { name: '一年最高', tf: '日线', price: hi },
+    { name: '一年最低', tf: '日线', price: lo },
+    { name: '50日均价', tf: '日线', price: ma50 },
+    { name: '100日均价', tf: '日线', price: ma100 },
+    { name: '200日均价', tf: '日线', price: ma200 },
   ];
-  if (cost > 0) mRows.push({ name: '我的成本', price: cost });
-  mRows.push({ name: '现价', price, here: true });
+  if (cost > 0) mRows.push({ name: '我的成本', tf: '持仓', price: cost });
+  mRows.push({ name: '当前现价', tf: '实时', price, here: true });
   mRows.sort((x, y) => y.price - x.price);
   $('ladder').innerHTML = mRows
-    .map((x) => `<li class="${x.here ? 'here' : ''}"><span>${x.name}</span><span>${money(x.price)}${x.here ? '' : `<small>${pct((x.price / price - 1) * 100)}</small>`}</span></li>`)
+    .map((x) => `<li class="${x.here ? 'here' : ''}"><span><span class="ladder-tag">${x.tf}</span>${x.name}</span><span>${money(x.price)}${x.here ? '' : `<small>${pct((x.price / price - 1) * 100)}</small>`}</span></li>`)
     .join('');
 
   renderTiaPanels();
 
   const bCloses = btcBars.map((x) => x.close);
   const bRows = [
-    { name: '200日线', price: sma(bCloses, 200).at(-1) },
-    { name: '现价', price: S.btcPrice, here: true },
+    { name: '200日均价', tf: '日线', price: sma(bCloses, 200).at(-1) },
+    { name: '当前现价', tf: '实时', price: S.btcPrice, here: true },
   ];
   if (S.tia) {
-    if (S.tia.struct?.abovePool?.price) bRows.push({ name: '前高流动性', price: S.tia.struct.abovePool.price });
-    if (S.tia.struct?.belowPool?.price) bRows.push({ name: '前低流动性', price: S.tia.struct.belowPool.price });
+    if (S.tia.struct?.abovePool?.price) bRows.push({ name: '前高压力位', tf: '日线', price: S.tia.struct.abovePool.price });
+    if (S.tia.struct?.belowPool?.price) bRows.push({ name: '前低防守位', tf: '日线', price: S.tia.struct.belowPool.price });
     if (S.tia.vp) {
-      bRows.push({ name: 'VAH 价值上沿', price: S.tia.vp.vah });
-      bRows.push({ name: 'POC 控制点', price: S.tia.vp.poc });
-      bRows.push({ name: 'VAL 价值下沿', price: S.tia.vp.val });
+      bRows.push({ name: '成交最密区', tf: '日线', price: S.tia.vp.poc });
     }
     if (S.tia.fib) {
-      bRows.push({ name: '0.618 回调/反弹', price: S.tia.fib.gp618 });
-      bRows.push({ name: '0.66 黄金口袋', price: S.tia.fib.gp660 });
+      bRows.push({ name: '黄金关口', tf: '日线', price: S.tia.fib.mid });
     }
-    if (S.tia.vegasD) bRows.push({ name: '日 Vegas(144)', price: S.tia.vegasD.ema144 });
-    if (S.tia.opens) bRows.push({ name: '本周开盘价', price: S.tia.opens.weeklyOpen });
+    if (S.tia.vegasD) bRows.push({ name: '半年趋势带', tf: '日线', price: S.tia.vegasD.ema144 });
+    if (S.tia.opens) bRows.push({ name: '本周开盘价', tf: '周线', price: S.tia.opens.weeklyOpen });
   }
   $('bLadder').innerHTML = bRows
     .filter((x) => x.price > 0)
     .sort((x, y) => y.price - x.price)
-    .map((x) => `<li class="${x.here ? 'here' : ''}"><span>${x.name}</span><span>${money0(x.price)}${x.here ? '' : `<small>${pct((x.price / S.btcPrice - 1) * 100)}</small>`}</span></li>`)
+    .map((x) => `<li class="${x.here ? 'here' : ''}"><span><span class="ladder-tag">${x.tf}</span>${x.name}</span><span>${money0(x.price)}${x.here ? '' : `<small>${pct((x.price / S.btcPrice - 1) * 100)}</small>`}</span></li>`)
     .join('');
 
   const br = rsi(bCloses);
   const brw = rsi(toWeekly(btcBars).map((x) => x.close));
   const br4 = S.btc4h?.length >= 20 ? rsi(S.btc4h.map((x) => x.close)) : null;
-  $('bRsiV').innerHTML = `${br.toFixed(1)} <span style="color:var(--text-muted)">/</span> ${brw.toFixed(1)}${br4 != null ? ` <span style="color:var(--text-muted)">/</span> ${br4.toFixed(1)}` : ''}`;
-  $('bRsiT').textContent = `依次为日线 / 周线${br4 != null ? ' / 4H' : ''} RSI(14)。`;
+  $('bRsiV').innerHTML = `日 ${br.toFixed(0)} <span style="color:var(--text-muted)">/</span> 周 ${brw.toFixed(0)}${br4 != null ? ` <span style="color:var(--text-muted)">/</span> 4H ${br4.toFixed(0)}` : ''}`;
+  $('bRsiT').textContent = `50 分为多空平衡点；低于 30 偏冷，高于 70 偏热。`;
   const bVolRatio = btcBars.at(-1).volume / sma(btcBars.map((x) => x.volume), 20).at(-2);
-  $('bVolV').textContent = bVolRatio.toFixed(2) + 'x';
-  $('bVolT').textContent = `${btcBars.at(-1).time} 相对 20 日均量。`;
+  $('bVolV').textContent = bVolRatio.toFixed(2) + ' 倍';
+  $('bVolT').textContent = `今天成交额约为前 20 天平均的 ${bVolRatio.toFixed(2)} 倍。`;
 
-  $('qPlace').textContent = `${place.toFixed(0)} 分（${pos}）`;
+  $('qPlace').textContent = `${pos}（${place.toFixed(0)}分）`;
   $('qPlacePin').style.left = place + '%';
-  $('qPlaceT').textContent = `${money(lo)} – ${money(hi)}`;
+  $('qPlaceT').textContent = `一年最低 ${money(lo)}，最高 ${money(hi)}`;
 
   const both = d50 >= 0 && d200 >= 0;
   const none = d50 < 0 && d200 < 0;
-  $('qTrend').textContent = both ? '偏涨势' : none ? '偏跌势' : '均线交织';
-  $('qTrend').className = 'ov-val ' + (both ? 'up' : none ? 'down' : '');
-  $('qTrendT').textContent = `50D ${pct(d50)} · 200D ${pct(d200)}`;
+  $('qTrend').textContent = both ? '上涨趋势中' : none ? '下跌趋势中' : '震荡拉锯中';
+  $('qTrend').className = 'metric-value ' + (both ? 'up' : none ? 'down' : '');
+  $('qTrendT').textContent = both
+    ? `站在近两个月(${money(ma50)})和一年均价上方`
+    : none
+    ? `压在近两个月(${money(ma50)})和一年均价下方`
+    : `卡在短期与长期均价之间，方向未明`;
 
   const [fw, fs] = forceWords(r);
   $('qForce').textContent = fw;
-  $('qForce').className = 'ov-val ' + (r >= 55 ? 'up' : r <= 45 ? 'down' : '');
-  $('qForceT').textContent = `${fs} · 周 ${rw.toFixed(0)}`;
+  $('qForce').className = 'metric-value ' + (r >= 55 ? 'up' : r <= 45 ? 'down' : '');
+  $('qForceT').textContent = `日线 ${r.toFixed(0)} 分 · 周线 ${rw.toFixed(0)} 分（${fs}）`;
 
   const moves = closes.slice(-61).map((v, i, arr) => (i ? Math.abs(v / arr[i - 1] - 1) * 100 : null)).filter((v) => v != null);
   const meanMove = moves.reduce((s, v) => s + v, 0) / moves.length;
-  $('qVola').textContent = `±${meanMove.toFixed(1)}% · ${bt.toFixed(2)}x`;
-  $('qVolaT').textContent = `60D 相关系数 ${c.toFixed(2)}`;
+  $('qVola').textContent = `每天约 ±${meanMove.toFixed(1)}%`;
+  $('qVolaT').textContent = `比特币涨跌 1%，它平均跟着动 ${bt.toFixed(1)}%`;
 
-  $('qBtc').innerHTML = `${money0(S.btcPrice)} <span class="${dirClass(btcChg)}" style="font-size:12px">${pct(btcChg)}</span>`;
-  const k = S.kpi?.btc;
-  $('qBtcT').textContent = k ? `距 ATH ${money0(k.ath)} 回撤 ${Math.abs(k.drawdownFromAth).toFixed(1)}%` : `联动倍数 ${bt.toFixed(1)}x`;
-
-  $('sentence').textContent = `现价居 52 周${pos}（${place.toFixed(0)} 分），${both ? '站上' : none ? '低于' : '介于'} 50/200 日均线，${fw}，量比 ${ratio.toFixed(2)}x，与 BTC 相关性 ${c.toFixed(2)}。`;
+  $('sentence').textContent = `MSTR 目前处在近一年的${pos}（第 ${place.toFixed(0)} 分），日线${both ? '站在均价上方偏强' : none ? '仍在均价下方偏弱' : '多空拉锯'}，走势与比特币${c >= 0.6 ? '高度联动' : '有一定联动'}。`;
 
   renderMood();
   renderCompanyAndValuation();
@@ -622,23 +647,24 @@ function renderMood() {
   const k = S.kpi?.btc;
   const fg = k?.fearGreedIndex;
   const vix = S.vix;
-  const fearName = { 'Extreme Fear': '极度恐惧', Fear: '恐惧', Neutral: '中性', Greed: '贪婪', 'Extreme Greed': '极度贪婪' };
-  const fgText = fg ? `${fearName[fg.classification] || fg.classification} ${fg.value}` : null;
-  $('qFear').textContent = fgText || (vix ? `VIX ${vix.meta.regularMarketPrice.toFixed(1)}` : '--');
+  const fearName = { 'Extreme Fear': '极度恐惧', Fear: '比较恐惧', Neutral: '情绪平和', Greed: '偏向贪婪', 'Extreme Greed': '极度贪婪' };
+  const fgText = fg ? `${fearName[fg.classification] || fg.classification}（${fg.value}分）` : null;
+  $('qFear').textContent = fgText || (vix ? `美股 VIX ${vix.meta.regularMarketPrice.toFixed(1)}` : '--');
   if (vix) {
     const v = vix.meta.regularMarketPrice;
-    $('qFearT').textContent = `美股 VIX ${v.toFixed(1)}（${vixWords(v)}）`;
+    $('qFearT').textContent = `0 分最怕、100 分最贪；美股恐慌指数 ${v.toFixed(1)}（${vixWords(v)}）`;
   } else {
-    $('qFearT').textContent = fg ? '来自官网币圈情绪指数' : '读取中…';
+    $('qFearT').textContent = fg ? '0 分代表大家最害怕，100 分代表最狂热' : '正在读取情绪数据…';
   }
+
   if (k && k.ma200w) {
     const gap200 = (S.btcPrice / k.ma200w - 1) * 100;
-    const gapReal = (S.btcPrice / k.realizedPrice - 1) * 100;
-    $('qCost').textContent = `${gap200 >= 0 ? '+' : '-'}${Math.abs(gap200).toFixed(0)}%`;
-    $('qCostT').textContent = `200W ${money0(k.ma200w)} · 链上成本 ${pct(gapReal)}`;
+    $('qCost').textContent = `${gap200 >= 0 ? '高于均价 ' : '低于均价 '}${Math.abs(gap200).toFixed(0)}%`;
+    $('qCost').className = 'metric-value tabular ' + (gap200 >= 0 ? '' : 'down');
+    $('qCostT').textContent = `4年周线均价 ${money0(k.ma200w)}，全网平均买币成本 ${money0(k.realizedPrice)}`;
   } else {
     $('qCost').textContent = '--';
-    $('qCostT').textContent = '等待官网成本数据…';
+    $('qCostT').textContent = '等待官网长期均价数据…';
   }
 }
 
@@ -651,8 +677,8 @@ function renderReview({ price, ma50, ma200, r, rw, ratio }) {
   const flat = [];
   const add = (list, cls, title, text) => list.push({ cls, title, text });
 
-  add(price >= ma200 ? bull : bear, price >= ma200 ? 'bull' : 'bear', price >= ma200 ? '站上 200 日线' : '低于 200 日线', `200D ${money(ma200)}`);
-  add(price >= ma50 ? bull : bear, price >= ma50 ? 'bull' : 'bear', price >= ma50 ? '站上 50 日线' : '低于 50 日线', `50D ${money(ma50)}`);
+  add(price >= ma200 ? bull : bear, price >= ma200 ? 'bull' : 'bear', `[日线] ${price >= ma200 ? '站上 200 日均价' : '低于 200 日均价'}`, `近一年平均成本 ${money(ma200)}`);
+  add(price >= ma50 ? bull : bear, price >= ma50 ? 'bull' : 'bear', `[日线] ${price >= ma50 ? '站上 50 日均价' : '低于 50 日均价'}`, `近两月平均成本 ${money(ma50)}`);
 
   const maCross = crossings(sma(closes, 50), sma(closes, 200), bars);
   const lastMa = maCross.at(-1);
@@ -660,19 +686,18 @@ function renderReview({ price, ma50, ma200, r, rw, ratio }) {
     add(
       lastMa.type === 'gold' ? bull : bear,
       lastMa.type === 'gold' ? 'bull' : 'bear',
-      lastMa.type === 'gold' ? '50/200 日线金叉态' : '50/200 日线死叉态',
-      `始于 ${lastMa.time}`
+      `[日线] 50/200 日均线${lastMa.type === 'gold' ? '金叉状态' : '死叉状态'}`,
+      `上次交叉于 ${lastMa.time}`
     );
   }
 
   const line = m.line.at(-1);
   const sig = m.signal.at(-1);
-  const macdCross = crossings(m.line, m.signal, bars).at(-1);
   add(
     line >= sig ? bull : bear,
     line >= sig ? 'bull' : 'bear',
-    line >= sig ? '日 MACD 多头排列' : '日 MACD 空头排列',
-    `${macdCross?.time || '--'} 交叉 · ${line >= 0 ? '零轴上' : '零轴下'}`
+    `[日线] MACD 短期动能${line >= sig ? '偏强' : '偏弱'}`,
+    line >= 0 ? '位于零轴上方' : '位于零轴下方'
   );
 
   const week = toWeekly(bars);
@@ -680,30 +705,30 @@ function renderReview({ price, ma50, ma200, r, rw, ratio }) {
   add(
     wm.line.at(-1) >= wm.signal.at(-1) ? bull : bear,
     wm.line.at(-1) >= wm.signal.at(-1) ? 'bull' : 'bear',
-    wm.line.at(-1) >= wm.signal.at(-1) ? '周 MACD 信号线上' : '周 MACD 信号线下',
-    '中长期动能参考'
+    `[周线] MACD 中长期动能${wm.line.at(-1) >= wm.signal.at(-1) ? '偏强' : '偏弱'}`,
+    '周线反映几个月级别大势'
   );
 
-  const rsiState = (name, x) => {
-    if (x >= 70) add(flat, 'flat', `${name} RSI ${x.toFixed(1)} (>70)`, '短线偏热，注意钝化');
-    else if (x <= 30) add(flat, 'flat', `${name} RSI ${x.toFixed(1)} (<30)`, '短线偏冷，注意弱势延续');
-    else add(x >= 50 ? bull : bear, x >= 50 ? 'bull' : 'bear', `${name} RSI ${x.toFixed(1)}`, `${x >= 50 ? '多头' : '空头'}力度占优`);
+  const rsiState = (tfName, x) => {
+    if (x >= 70) add(flat, 'flat', `[${tfName}] RSI ${x.toFixed(0)} 分（偏热）`, '连涨较多，追高需谨慎');
+    else if (x <= 30) add(flat, 'flat', `[${tfName}] RSI ${x.toFixed(0)} 分（偏冷）`, '连跌较多，卖压偏重');
+    else add(x >= 50 ? bull : bear, x >= 50 ? 'bull' : 'bear', `[${tfName}] RSI ${x.toFixed(0)} 分`, `${x >= 50 ? '买方' : '卖方'}力道占优`);
   };
-  rsiState('日', r);
-  rsiState('周', rw);
+  rsiState('日线', r);
+  rsiState('周线', rw);
 
   const last = bars.at(-1);
   const isUp = last.close >= last.open;
-  if (ratio >= 1.5) add(isUp ? bull : bear, isUp ? 'bull' : 'bear', `放量${isUp ? '上涨' : '下跌'} (${ratio.toFixed(2)}x)`, '高于 20 日均量 1.5 倍以上');
-  else add(flat, 'flat', `量比 ${ratio.toFixed(2)}x`, '成交量处常态水平');
+  if (ratio >= 1.5) add(isUp ? bull : bear, isUp ? 'bull' : 'bear', `[日线] 放量${isUp ? '上涨' : '下跌'} (${ratio.toFixed(1)}倍)`, '成交明显比平时热闹');
+  else add(flat, 'flat', `[日线] 成交量正常 (${ratio.toFixed(1)}倍)`, '接近过去 20 天平均水平');
 
-  $('tallyBadge').innerHTML = `<span class="up">多 ${bull.length}</span> · <span class="down">空 ${bear.length}</span> · 中 ${flat.length}`;
+  $('tallyBadge').innerHTML = `<span class="up">偏多 ${bull.length}</span> · <span class="down">偏空 ${bear.length}</span> · 中性 ${flat.length}`;
   const combined = [...bull, ...bear, ...flat].filter((x) => S.signalFilter === 'all' || x.cls === S.signalFilter);
   $('signals').innerHTML = combined.map((it) => `<div class="signal-item ${it.cls}"><b>${esc(it.title)}</b><span>${esc(it.text)}</span></div>`).join('');
 
   const fwd = (i, n) => (i + n < closes.length ? pct((closes[i + n] / closes[i] - 1) * 100) : '未满');
   $('crossTable').innerHTML =
-    '<thead><tr><th>日期</th><th>类型</th><th>收盘</th><th>+20日</th><th>+60日</th><th>至今</th></tr></thead><tbody>' +
+    '<thead><tr><th>交叉日期</th><th>信号（日线）</th><th>当天收盘</th><th>20天后</th><th>60天后</th><th>拿到今天</th></tr></thead><tbody>' +
     maCross
       .slice()
       .reverse()
@@ -713,7 +738,7 @@ function renderReview({ price, ma50, ma200, r, rw, ratio }) {
       )
       .join('') +
     '</tbody>';
-  $('crossNote').textContent = `近 5 年共 ${maCross.length} 次交叉，历史样本仅供参考。`;
+  $('crossNote').textContent = `过去 5 年（日线）一共只出现过 ${maCross.length} 次交叉，仅供参考。`;
 }
 
 function renderCompanyAndValuation() {
@@ -722,39 +747,39 @@ function renderCompanyAndValuation() {
   if (!k || !(toNum(k.mNav) > 0)) {
     if (S.kpi?.tried) {
       $('qMnav').textContent = '--';
-      $('qMnavT').textContent = '官网暂不可用';
+      $('qMnavT').textContent = '官网暂未响应，稍后自动重试';
     }
     return;
   }
 
   const v = toNum(k.mNav);
   const ext = k.extendedSession;
-  const premText = v >= 1 ? `溢价 ${((v - 1) * 100).toFixed(0)}%` : `折价 ${((1 - v) * 100).toFixed(0)}%`;
+  const premText = v > 1.005 ? `贵了 ${((v - 1) * 100).toFixed(0)}%（溢价）` : v < 0.995 ? `便宜 ${((1 - v) * 100).toFixed(0)}%（折价）` : '基本平价';
   const net = toNum(k.netBtcPerShareUsd);
-  $('qMnav').textContent = v.toFixed(2) + 'x';
-  $('qMnavT').textContent = `${premText}${net > 0 ? ` · 净含币 ${money(net)}/股` : ''}`;
+  $('qMnav').textContent = `${v.toFixed(2)} 倍`;
+  $('qMnavT').textContent = `${premText}${net > 0 ? `，每股扣债含币约 ${money(net)}` : ''}`;
 
   const held = toNum(k.btcHoldings);
   const bn = (millions) => (millions / 100).toFixed(0) + ' 亿美元';
 
-  $('valKpiMnav').textContent = v.toFixed(2) + 'x';
-  $('valKpiMnavNote').textContent = `${premText}${ext?.mNav ? ` · 盘外 ${toNum(ext.mNav).toFixed(2)}x` : ''}`;
+  $('valKpiMnav').textContent = `${v.toFixed(2)} 倍`;
+  $('valKpiMnavNote').textContent = `${premText}${ext?.mNav ? ` · 盘外 ${toNum(ext.mNav).toFixed(2)}倍` : ''}`;
   $('valKpiBtc').textContent = held.toLocaleString('en-US') + ' 枚';
-  $('valKpiBtcShare').textContent = `占总量 ${toNum(k.pctOfBtcTotalSupply).toFixed(2)}%`;
+  $('valKpiBtcShare').textContent = `占全球 2100 万枚上限的 ${toNum(k.pctOfBtcTotalSupply).toFixed(2)}%`;
   $('valKpiNetBps').textContent = (toNum(k.netSatsPerShare) / 1e8).toFixed(5) + ' 枚';
-  $('valKpiGrossBps').textContent = `约 ${money(net)} / 股`;
+  $('valKpiGrossBps').textContent = `折合约 ${money(net)} / 股`;
   if (m) {
     $('valKpiMcap').textContent = bn(toNum(m.marketCap));
-    $('valKpiDebt').textContent = `债+优先股 ${bn(toNum(m.debt) + toNum(m.pref))}`;
+    $('valKpiDebt').textContent = `债务与优先股共 ${bn(toNum(m.debt) + toNum(m.pref))}`;
   }
 
   const rows = [
-    ['持有比特币总量', held.toLocaleString('en-US') + ' 枚'],
-    ['占 2100 万上限', toNum(k.pctOfBtcTotalSupply).toFixed(2) + '%'],
-    ['每股含币（未扣债）', (toNum(k.satsPerShare) / 1e8).toFixed(5) + ' 枚 (' + money(toNum(k.btcPerShareUsd)) + ')'],
-    ['扣债后每股含币', (toNum(k.netSatsPerShare) / 1e8).toFixed(5) + ' 枚 (' + money(net) + ')'],
+    ['公司持有比特币总数', held.toLocaleString('en-US') + ' 枚'],
+    ['占比特币总上限比例', toNum(k.pctOfBtcTotalSupply).toFixed(2) + '%'],
+    ['每股对应比特币（未扣债）', (toNum(k.satsPerShare) / 1e8).toFixed(5) + ' 枚 (' + money(toNum(k.btcPerShareUsd)) + ')'],
+    ['扣掉债务后每股含币', (toNum(k.netSatsPerShare) / 1e8).toFixed(5) + ' 枚 (' + money(net) + ')'],
   ];
-  if (m) rows.push(['公司总市值', bn(toNum(m.marketCap))], ['债务与优先股', bn(toNum(m.debt) + toNum(m.pref))]);
+  if (m) rows.push(['公司股票总市值', bn(toNum(m.marketCap))], ['公司债务与优先股', bn(toNum(m.debt) + toNum(m.pref))]);
   $('facts').innerHTML = rows.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
 }
 
@@ -763,30 +788,30 @@ function renderMnavBlock() {
   charts.initMnav();
   const res = charts.drawMnav(S, S.mnavMode, S.mnavMonths);
   if (!res) return;
-  const f2 = (n) => n.toFixed(2) + 'x';
+  const f2 = (n) => n.toFixed(2) + ' 倍';
   const row = (a, b) => `<div><dt>${a}</dt><dd>${b}</dd></div>`;
   const stat = (name, s) =>
     row(`${name}最高`, `${f2(s.hi[s.field])} (${dateCn(s.hi.date)})`) +
     row(`${name}最低`, `${f2(s.lo[s.field])} (${dateCn(s.lo.date)})`) +
-    row(`${name}均值`, f2(s.avg));
+    row(`${name}平均`, f2(s.avg));
 
   if (S.mnavMode === 'official') {
     $('mnavLegend').innerHTML = `
-      <span class="legend-item"><span class="legend-line" style="background:var(--btc)"></span>现行算法</span>
-      <span class="legend-item"><span class="legend-line" style="background:var(--ma-long)"></span>旧算法（EV ÷ 持币价值）</span>`;
+      <span class="legend-item"><span class="legend-line" style="background:var(--btc)"></span>官网现行算法（日线）</span>
+      <span class="legend-item"><span class="legend-line" style="background:var(--ma-long)"></span>官网旧算法（企业价值 ÷ 持币价值）</span>`;
     const live = toNum(S.kpi?.btc?.mNav);
     const fallbackNow = S.history.find((r) => r.mNav != null)?.mNav || 0;
-    $('mnavNow').textContent = (live > 0 ? live : fallbackNow).toFixed(2) + 'x';
-    $('mnavSay').textContent = res.b ? `旧算法约 ${res.b.now.toFixed(2)}x（高于区间 ${res.b.share.toFixed(0)}% 天数）` : '官网现行算法';
+    $('mnavNow').textContent = (live > 0 ? live : fallbackNow).toFixed(2) + ' 倍';
+    $('mnavSay').textContent = res.b ? `旧算法约 ${res.b.now.toFixed(2)} 倍（比过去 ${res.b.share.toFixed(0)}% 的日子高）` : '官网现行口径';
     $('mnavFacts').innerHTML =
       (res.a ? stat('现行', { ...res.a, field: 'mNav' }) : '') + (res.b ? stat('旧版', { ...res.b, field: 'mNavEntVal' }) : '');
-    $('mnavNote').textContent = '2026/07/23 官网更新定义；虚线 1x 为平价。';
+    $('mnavNote').textContent = '虚线 1 倍代表股票价格正好等于它手里的净比特币价值；2026/07/23 官网调整过一次算法。';
   } else {
-    $('mnavLegend').innerHTML = `<span class="legend-item"><span class="legend-line" style="background:var(--btc)"></span>市值 ÷ 持币价值（未计债）</span>`;
+    $('mnavLegend').innerHTML = `<span class="legend-item"><span class="legend-line" style="background:var(--btc)"></span>简化口径：总市值 ÷ 持币总价值（日线）</span>`;
     $('mnavNow').textContent = res.s ? f2(res.s.now) : '--';
-    $('mnavSay').textContent = res.s ? `高于区间 ${res.s.share.toFixed(0)}% 天数` : '';
+    $('mnavSay').textContent = res.s ? `比区间内 ${res.s.share.toFixed(0)}% 的日子高` : '';
     $('mnavFacts').innerHTML = res.s ? stat('', { ...res.s, field: 'simple' }) : '';
-    $('mnavNote').textContent = '2020 年起长周期简化参考，未计债务与优先股。';
+    $('mnavNote').textContent = '未扣除债务，仅用来回看 2020 年以来的大周期溢价冷热。';
   }
 }
 
@@ -797,15 +822,15 @@ function renderPsBlock() {
   if (!h) return;
   const n = (v) => v.toFixed(5) + ' 枚';
   const row = (a, b) => `<div><dt>${a}</dt><dd>${b}</dd></div>`;
-  const m = (v) => (v / 1e8).toFixed(2) + ' 亿';
+  const m = (v) => (v / 1e8).toFixed(2) + ' 亿股';
   $('psNow').textContent = n(h.now.perShare);
-  $('psSay').textContent = `较峰值 (${dateCn(h.peak.date)}) 变动 ${pct(h.fromPeak)}`;
+  $('psSay').textContent = `相比 ${dateCn(h.peak.date)} 最高峰变动 ${pct(h.fromPeak)}`;
   $('psFacts').innerHTML =
-    row('历史峰值', `${n(h.peak.perShare)} (${dateCn(h.peak.date)})`) +
+    row('历史最高', `${n(h.peak.perShare)} (${dateCn(h.peak.date)})`) +
     row(`${dateCn(h.first.date)} 起点`, n(h.first.perShare)) +
-    row('累计每股含币', pct(h.perShareChange)) +
-    row('累计持币总量', pct(h.btcChange)) +
-    row('累计股数变化', `${pct(h.sharesChange)} (${m(h.first.shares)}→${m(h.now.shares)})`);
+    row('每股含币累计变化', pct(h.perShareChange)) +
+    row('公司持币累计变化', pct(h.btcChange)) +
+    row('总股数变化', `${pct(h.sharesChange)} (${m(h.first.shares)}→${m(h.now.shares)})`);
 }
 
 function renderEvents() {
@@ -816,11 +841,11 @@ function renderEvents() {
     const fiscal = months.indexOf(latest.fiscalQtrEnd.slice(0, 3));
     const nextName = months[(fiscal + 3) % 12];
     const last = S.earn.find((e) => e.fiscalQtrEnd.startsWith(nextName));
-    const est = last ? `去年同期为 ${dateCn(last.date)}。` : '';
-    $('earnNext').innerHTML = `下次财报待定（最近一次 ${dateCn(latest.date)}）。${est}`;
-    const fiscalCn = (s) => `${s.slice(-4)}Q${Math.floor(months.indexOf(s.slice(0, 3)) / 3) + 1}`;
+    const est = last ? `去年同季在 ${dateCn(last.date)} 公布。` : '';
+    $('earnNext').innerHTML = `下次财报日期待公布（最近一次是 ${dateCn(latest.date)}）。${est}`;
+    const fiscalCn = (s) => `${s.slice(-4)}年第${Math.floor(months.indexOf(s.slice(0, 3)) / 3) + 1}季`;
     $('earnTable').innerHTML =
-      '<thead><tr><th>公布日</th><th>财季</th><th>次日涨跌</th></tr></thead><tbody>' +
+      '<thead><tr><th>公布日期</th><th>财报季度</th><th>公布后次日涨跌</th></tr></thead><tbody>' +
       S.earn
         .map((e) => {
           const i = bars.findIndex((b) => b.time > e.date);
@@ -830,7 +855,7 @@ function renderEvents() {
         .join('') +
       '</tbody>';
   } else if (S.tried) {
-    $('earnNext').textContent = '暂未取到财报排期。';
+    $('earnNext').textContent = '暂未取到财报日期。';
   }
 
   if (S.history && S.btc) {
@@ -844,20 +869,20 @@ function renderEvents() {
     const year = asc.at(-1).date.slice(0, 4);
     const first = asc.findIndex((r) => r.date.startsWith(year));
     const net = Math.round(asc.at(-1).btcHoldings - asc[Math.max(0, first - 1)].btcHoldings);
-    $('ledgerNext').innerHTML = `${year} 年至今净${net >= 0 ? '增持' : '减少'} <b>${Math.abs(net).toLocaleString('en-US')}</b> 枚（展示近 10 笔）。`;
+    $('ledgerNext').innerHTML = `${year} 年以来累计净${net >= 0 ? '增持' : '减少'} <b>${Math.abs(net).toLocaleString('en-US')}</b> 枚比特币（以下为最近 10 次变动）。`;
     $('ledgerTable').innerHTML =
-      '<thead><tr><th>日期</th><th>方向</th><th>变动(枚)</th><th>当日币价</th><th>累计持币</th></tr></thead><tbody>' +
+      '<thead><tr><th>日期</th><th>动作</th><th>变动数量(枚)</th><th>当天币价</th><th>买后总持币(枚)</th></tr></thead><tbody>' +
       changes
         .slice(-10)
         .reverse()
         .map((c) => {
           const p = btcAt.get(c.date);
-          return `<tr class="tr-hover"><td>${dateCn(c.date)}</td><td><span class="badge ${c.delta > 0 ? 'badge-up' : 'badge-down'}">${c.delta > 0 ? '增持' : '减少'}</span></td><td style="font-weight:600">${Math.abs(c.delta).toLocaleString('en-US')}</td><td>${p ? money0(p) : '--'}</td><td>${Math.round(c.total).toLocaleString('en-US')}</td></tr>`;
+          return `<tr class="tr-hover"><td>${dateCn(c.date)}</td><td><span class="badge ${c.delta > 0 ? 'badge-up' : 'badge-down'}">${c.delta > 0 ? '买币增持' : '减少'}</span></td><td style="font-weight:600">${Math.abs(c.delta).toLocaleString('en-US')}</td><td>${p ? money0(p) : '--'}</td><td>${Math.round(c.total).toLocaleString('en-US')}</td></tr>`;
         })
         .join('') +
       '</tbody>';
   } else if (S.tried) {
-    $('ledgerNext').textContent = '暂未取到持币变动记录。';
+    $('ledgerNext').textContent = '暂未取到持币变化记录。';
   }
 }
 
@@ -869,10 +894,10 @@ function renderPositionAndStress() {
   if (!(cost > 0)) {
     $('plV').textContent = '--';
     $('plV').className = 'facts-big tabular';
-    $('plT').textContent = '填入成本后，MSTR K 线自动显示成本虚线。';
+    $('plT').textContent = '填入买入均价后，MSTR K 线图上会自动画出您的成本线。';
     $('heroPosVal').textContent = '未填成本价';
     $('heroPosVal').className = 'status-box-val tabular';
-    $('heroPosSub').textContent = '点击录入成本与股数';
+    $('heroPosSub').textContent = '点击填入买入均价与股数';
   } else if (S.price) {
     const pl = (S.price / cost - 1) * 100;
     const plAmt = qty > 0 ? (S.price >= cost ? '+' : '-') + money(Math.abs(S.price - cost) * qty) : '';
@@ -880,9 +905,9 @@ function renderPositionAndStress() {
     $('plV').className = 'facts-big tabular ' + dirClass(pl);
     $('plT').textContent =
       qty > 0
-        ? `现价 ${money(S.price)} · 持仓 ${p ? '•• 股' : qty + ' 股'} 浮盈亏 ${maskUsd(plAmt)}`
-        : `现价 ${money(S.price)} · 成本 ${maskUsd(money(cost))}`;
-    $('heroPosVal').innerHTML = `${pct(pl)} ${plAmt ? `<span style="font-size:11.5px;font-weight:500">${maskUsd(plAmt)}</span>` : ''}`;
+        ? `现价 ${money(S.price)} · 持有 ${p ? '•• 股' : qty + ' 股'} 账面浮盈亏 ${maskUsd(plAmt)}`
+        : `现价 ${money(S.price)} · 买入均价 ${maskUsd(money(cost))}`;
+    $('heroPosVal').innerHTML = `${pct(pl)} ${plAmt ? `<span style="font-size:12px;font-weight:500">${maskUsd(plAmt)}</span>` : ''}`;
     $('heroPosVal').className = 'status-box-val tabular ' + dirClass(pl);
     $('heroPosSub').textContent = `成本 ${maskUsd(money(cost))}${qty > 0 ? ` · ${maskShares(qty + ' 股')}` : ''}`;
   }
@@ -894,7 +919,7 @@ function renderPositionAndStress() {
     ? `已触发 ${firedCount} 条提醒`
     : S.userData.plan.review
     ? `下次复盘：${dateCn(S.userData.plan.review)}`
-    : '记录买入理由、条件提醒与复盘日';
+    : '记录买入理由、到价提醒与复盘日';
 
   if (!S.mstr || !S.price) return;
   const value = qty > 0 ? qty * S.price : 10000;
@@ -903,14 +928,14 @@ function renderPositionAndStress() {
   const usd = (n) => maskUsd('$' + Math.round(n).toLocaleString('en-US'));
   const costRow =
     cost > 0 && qty > 0
-      ? row('回本所需', S.price >= cost ? `高于成本 ${((S.price / cost - 1) * 100).toFixed(1)}%` : `需涨 ${((cost / S.price - 1) * 100).toFixed(1)}%`)
+      ? row('距离回本', S.price >= cost ? `高于成本 ${((S.price / cost - 1) * 100).toFixed(1)}%` : `还需涨 ${((cost / S.price - 1) * 100).toFixed(1)}%`)
       : '';
   $('planStress').innerHTML =
-    row(qty > 0 ? '持仓现值' : '假设规模', usd(value)) +
-    row('回撤 30% / 50% / 70%', `-${usd(value * 0.3)} / -${usd(value * 0.5)} / -${usd(value * 0.7)}`) +
+    row(qty > 0 ? '当前持仓市值' : '假如持有 $10,000', usd(value)) +
+    row('再跌 30% / 50%', `少 ${usd(value * 0.3)} / 少 ${usd(value * 0.5)}`) +
     costRow +
-    row('近 5 年最大回撤', `${worst.pct.toFixed(1)}% (${dateCn(worst.from)}–${dateCn(worst.to)})`);
-  $('planStressNote').textContent = '跌 50% 需涨 100% 回本，请以损定量控制仓位。';
+    row('近 5 年最惨跌过', `${worst.pct.toFixed(1)}% (${dateCn(worst.from)}–${dateCn(worst.to)})`);
+  $('planStressNote').textContent = '跌去一半（-50%）需要翻倍（+100%）才能回本，切勿借钱或满仓。';
 }
 
 function ruleContext() {
@@ -923,10 +948,10 @@ function ruleDistance(rule) {
   const v = Number(rule.value);
   const p = S.price;
   if (!p) return '';
-  if (rule.type === 'priceBelow' || rule.type === 'priceAbove') return `距现价 ${pct((v / p - 1) * 100)}`;
+  if (rule.type === 'priceBelow' || rule.type === 'priceAbove') return `离现价 ${pct((v / p - 1) * 100)}`;
   if (rule.type === 'mnavBelow' || rule.type === 'mnavAbove') {
     const m = toNum(S.kpi?.btc?.mNav);
-    return m > 0 ? `当前 ${m.toFixed(2)}x` : '';
+    return m > 0 ? `当前 ${m.toFixed(2)} 倍` : '';
   }
   if (rule.type === 'drawdown' && S.mstr) {
     const seen = S.mstr.bars.filter((b) => b.time >= rule.created).map((b) => b.close);
@@ -939,12 +964,12 @@ function ruleDistance(rule) {
 function backText(r) {
   if (!r) return '暂无历史回看数据。';
   const fmt = (v) => (v == null ? '未满' : pct(v));
-  const head = `自 ${dateCn(r.from)} 起共触发 <b>${r.events.length}</b> 次。`;
+  const head = `从 ${dateCn(r.from)} 至今（日线收盘），一共触发过 <b>${r.events.length}</b> 次。`;
   if (!r.events.length) return head;
   const list = r.events
     .slice(-5)
     .reverse()
-    .map((e) => `${dateCn(e.date)} (${money(e.close)})：+20日 ${fmt(e.after20)}，+60日 ${fmt(e.after60)}`)
+    .map((e) => `${dateCn(e.date)} (${money(e.close)})：20天后 ${fmt(e.after20)}，60天后 ${fmt(e.after60)}`)
     .join('<br>');
   return `${head}<br>${list}`;
 }
@@ -955,36 +980,36 @@ function renderPlan() {
   $('planReview').value = plan.review || '';
 
   $('ruleTable').innerHTML = plan.rules.length
-    ? '<thead><tr><th>状态</th><th>条件</th><th>执行动作</th><th>操作</th></tr></thead><tbody>' +
+    ? '<thead><tr><th>状态</th><th>触发条件</th><th>我的打算</th><th>操作</th></tr></thead><tbody>' +
       plan.rules
         .map((r) => {
           const tested = r.showBack ? backtestRule(r, S.mstr?.bars || [], S.history || []) : null;
           const backRow = !r.showBack ? '' : `<tr><td colspan="4" class="wrap-cell"><div class="explain-box">${backText(tested)}</div></td></tr>`;
           return `<tr class="tr-hover">
-            <td><span class="badge ${r.firedAt ? 'badge-btc' : 'badge-neutral'}">${r.firedAt ? '已触发 ' + dateCn(r.firedAt) : '监控中'}</span></td>
+            <td><span class="badge ${r.firedAt ? 'badge-btc' : 'badge-neutral'}">${r.firedAt ? '已到 ' + dateCn(r.firedAt) : '监控中'}</span></td>
             <td class="wrap-cell"><b>${esc(RULES[r.type].label(r.value))}</b><div style="font-size:11px;color:var(--text-tertiary)">${esc(ruleDistance(r))}</div></td>
-            <td class="wrap-cell">${esc(r.note) || '<span class="warn">未填</span>'}</td>
+            <td class="wrap-cell">${esc(r.note) || '<span class="warn">未写</span>'}</td>
             <td>
-              ${r.type === 'date' ? '' : `<button type="button" class="pill-btn sm" data-act="back" data-id="${r.id}">${r.showBack ? '收起' : '回看'}</button>`}
-              ${r.firedAt ? `<button type="button" class="pill-btn sm" data-act="rearm" data-id="${r.id}">重置</button>` : ''}
-              <button type="button" class="pill-btn sm danger" data-act="del" data-id="${r.id}">删</button>
+              ${r.type === 'date' ? '' : `<button type="button" class="pill-btn sm" data-act="back" data-id="${r.id}">${r.showBack ? '收起' : '历史回看'}</button>`}
+              ${r.firedAt ? `<button type="button" class="pill-btn sm" data-act="rearm" data-id="${r.id}">重启用</button>` : ''}
+              <button type="button" class="pill-btn sm danger" data-act="del" data-id="${r.id}">删除</button>
             </td>
           </tr>${backRow}`;
         })
         .join('') +
       '</tbody>'
-    : '<tbody><tr><td class="wrap-cell" style="color:var(--text-tertiary)">暂无规则，可在上方快速添加。</td></tr></tbody>';
+    : '<tbody><tr><td class="wrap-cell" style="color:var(--text-tertiary)">还没有添加提醒规则，可点上方快捷按钮添加。</td></tr></tbody>';
 
   $('tradeTable').innerHTML = plan.trades.length
-    ? '<thead><tr><th>日期</th><th>方向</th><th>股数</th><th>价格</th><th>备注</th><th></th></tr></thead><tbody>' +
+    ? '<thead><tr><th>日期</th><th>方向</th><th>股数</th><th>成交价</th><th>当时想法</th><th></th></tr></thead><tbody>' +
       plan.trades
         .map(
           (x) =>
-            `<tr class="tr-hover"><td>${dateCn(x.date)}</td><td><span class="badge ${x.side === '买入' ? 'badge-up' : 'badge-down'}">${esc(x.side)}</span></td><td>${maskShares(x.shares + ' 股')}</td><td>${maskUsd(money(x.price))}</td><td class="wrap-cell">${esc(x.note)}</td><td><button type="button" class="pill-btn sm danger" data-trade="${x.id}">删</button></td></tr>`
+            `<tr class="tr-hover"><td>${dateCn(x.date)}</td><td><span class="badge ${x.side === '买入' ? 'badge-up' : 'badge-down'}">${esc(x.side)}</span></td><td>${maskShares(x.shares + ' 股')}</td><td>${maskUsd(money(x.price))}</td><td class="wrap-cell">${esc(x.note)}</td><td><button type="button" class="pill-btn sm danger" data-trade="${x.id}">删除</button></td></tr>`
         )
         .join('') +
       '</tbody>'
-    : '<tbody><tr><td class="wrap-cell" style="color:var(--text-tertiary)">暂无交易记录。</td></tr></tbody>';
+    : '<tbody><tr><td class="wrap-cell" style="color:var(--text-tertiary)">还没有记过实盘买卖。</td></tr></tbody>';
 
   const closes = S.mstr?.bars.slice(-61).map((b) => b.close) || [];
   const moves = closes.slice(1).map((v, i) => Math.abs(v / closes[i] - 1) * 100);
@@ -1002,15 +1027,15 @@ function checkPlan() {
   for (const r of plan.rules) {
     if (r.firedAt || !evalRule(r, ctx)) continue;
     r.firedAt = ctx.today;
-    fired.push(`${RULES[r.type].label(r.value)}（${r.note || '未填动作'}）`);
+    fired.push(`${RULES[r.type].label(r.value)}（${r.note || '未写动作'}）`);
   }
   if (plan.review && ctx.today >= plan.review && plan.reviewFired !== plan.review) {
     plan.reviewFired = plan.review;
-    fired.push('已到复盘日期');
+    fired.push('已到您设定的复盘日期');
   }
   if (!fired.length) return;
   persistUserData(true);
-  const msg = '交易计划：' + fired.join('；') + (plan.why ? `。买入理由：${plan.why}` : '');
+  const msg = '交易计划：' + fired.join('；') + (plan.why ? `。当初买入理由：${plan.why}` : '');
   $('bannerText').innerHTML = `<strong>计划提醒：</strong>${esc(msg)}`;
   $('banner').hidden = false;
   chime();
@@ -1022,10 +1047,10 @@ function buildMagPicksUI() {
   const pick = ([sym, name, color]) =>
     `<label><input type="checkbox" data-sym="${sym}" ${shown.has(sym) ? 'checked' : ''}><i style="background:${color}"></i>${name}</label>`;
   $('magPicks').innerHTML = [
-    ['七姐妹', MAG7_LIST],
-    ['行业龙头', MAG_LEAD_LIST],
+    ['美股七姐妹', MAG7_LIST],
+    ['各行业龙头', MAG_LEAD_LIST],
     ['核心关注', MAG_EXTRA_LIST],
-    ['加密/A股', [MAG_BTC_ITEM, ...MAG_CN_LIST]],
+    ['加密与A股', [MAG_BTC_ITEM, ...MAG_CN_LIST]],
   ]
     .map(([title, list]) => `<div class="mag-row"><b>${title}</b><div class="mag-list">${list.map(pick).join('')}</div></div>`)
     .join('');
@@ -1054,13 +1079,13 @@ function renderMag() {
   const maxAbs = Math.max(...rows.map(([, l]) => Math.abs(l.change)), 10);
 
   $('magTable').innerHTML =
-    '<thead><tr><th>标的</th><th>涨跌幅</th></tr></thead><tbody>' +
+    '<thead><tr><th>标的</th><th>累计涨跌</th></tr></thead><tbody>' +
     rows
       .map(([sym, l]) => {
         const w = Math.min(100, Math.round((Math.abs(l.change) / maxAbs) * 100));
         const col = l.change >= 0 ? 'var(--up)' : 'var(--down)';
         return `<tr class="tr-hover">
-          <td><span style="display:inline-flex;align-items:center;gap:5px"><i style="display:inline-block;width:6.5px;height:6.5px;border-radius:99px;background:${colorMap[sym] || 'var(--blue)'}"></i>${MAG_BOLD.has(sym) ? `<b>${names[sym]}</b>` : names[sym]} <span style="font-size:10.5px;color:var(--text-tertiary)">${codes[sym] || sym}</span></span></td>
+          <td><span style="display:inline-flex;align-items:center;gap:6px"><i style="display:inline-block;width:7px;height:7px;border-radius:99px;background:${colorMap[sym] || 'var(--blue)'}"></i>${MAG_BOLD.has(sym) ? `<b>${names[sym]}</b>` : names[sym]} <span style="font-size:11px;color:var(--text-tertiary)">${codes[sym] || sym}</span></span></td>
           <td class="${dirClass(l.change)}" style="font-weight:600">${pct(l.change)}<span class="perf-bar-bg"><div class="perf-bar-fill" style="width:${w}%;background:${col}"></div></span></td>
         </tr>`;
       })
@@ -1081,15 +1106,15 @@ function renderDca() {
   const unit = isMstr ? '股' : '枚';
   $('dcaAvg').textContent = isMstr ? money(r.avg) : money0(r.avg);
   const vs = (last / r.avg - 1) * 100;
-  $('dcaSay').textContent = `自 ${r.from} 起共 ${r.count} 期，现价较均价 ${pct(vs)}`;
+  $('dcaSay').textContent = `从 ${r.from} 起共投 ${r.count} 期，现价比定投均价 ${vs >= 0 ? '高 ' : '低 '}${Math.abs(vs).toFixed(1)}%`;
   const row = (a, b, cls = '') => `<div><dt>${a}</dt><dd class="${cls}">${b}</dd></div>`;
   const usd = (n) => '$' + Math.round(n).toLocaleString('en-US');
   $('dcaFacts').innerHTML =
-    row('累计本金', usd(r.spent)) +
-    row('累计数量', `${r.units.toFixed(isMstr ? 2 : 5)} ${unit}`) +
-    row('当前市值', usd(r.value)) +
-    row('账面盈亏', `${r.pl >= 0 ? '+' : '-'}${usd(Math.abs(r.value - r.spent))} (${pct(r.pl * 100)})`, dirClass(r.pl)) +
-    row('最大浮亏', r.worst < 0 ? `${pct(r.worst * 100)} (${r.worstTime})` : '无', r.worst < 0 ? 'down' : '');
+    row('累计投入本金', usd(r.spent)) +
+    row('累计攒下数量', `${r.units.toFixed(isMstr ? 2 : 5)} ${unit}`) +
+    row('现在值多少钱', usd(r.value)) +
+    row('账面赚亏', `${r.pl >= 0 ? '+' : '-'}${usd(Math.abs(r.value - r.spent))} (${pct(r.pl * 100)})`, dirClass(r.pl)) +
+    row('途中最惨浮亏', r.worst < 0 ? `${pct(r.worst * 100)} (${r.worstTime})` : '全程没亏过', r.worst < 0 ? 'down' : '');
 }
 
 async function loadQdii() {
@@ -1123,7 +1148,7 @@ function renderQdii() {
   const sCount = byClass.filter((r) => r.index === '标普 500').length;
 
   $('qdiiStatTotal').textContent = `${byClass.length} 只`;
-  $('qdiiStatSplit').textContent = `纳指 ${nCount} · 标普 ${sCount}`;
+  $('qdiiStatSplit').textContent = `纳指 ${nCount} 只 · 标普 ${sCount} 只`;
   $('qdiiStatOpen').textContent = `${open.length} 只`;
   $('qdiiStatBig').textContent = `${big.length} 只`;
   $('qdiiStatTracked').textContent = dateCn(S.qdii.tracked_from);
@@ -1132,16 +1157,16 @@ function renderQdii() {
     .filter((r) => !kw || r.name.toLowerCase().includes(kw) || r.code.toLowerCase().includes(kw) || (r.company || '').toLowerCase().includes(kw))
     .sort((a, b) => b.st.limit - a.st.limit || a.name.localeCompare(b.name, 'zh'));
 
-  $('qdiiSay').innerHTML = `筛选 <b>${byClass.length}</b> 只，可买 <b>${open.length}</b> 只，当前显示 <b>${list.length}</b> 条。`;
+  $('qdiiSay').innerHTML = `共筛选出 <b>${byClass.length}</b> 只，目前能买的有 <b>${open.length}</b> 只，下方显示 <b>${list.length}</b> 条。`;
 
-  const since = (r) => (r.since ? dateCn(r.since) : r.st.open ? `${dateCn(r.seen)} 前已开` : '期内未变');
+  const since = (r) => (r.since ? dateCn(r.since) : r.st.open ? `${dateCn(r.seen)} 前已开放` : '记录期内未变');
   const rate = (r) => {
     if (r.discounted_rate == null || r.discounted_rate === '') return '--';
     const s = String(r.discounted_rate).trim();
     return s.endsWith('%') ? s : `${s}%`;
   };
   $('qdiiTable').innerHTML =
-    '<thead><tr><th>基金名称</th><th>代码</th><th>指数</th><th>费率</th><th>申购状态</th><th>变更日期</th></tr></thead><tbody>' +
+    '<thead><tr><th>基金名称</th><th>代码</th><th>跟踪指数</th><th>买入费率</th><th>现在能买吗</th><th>状态变化日</th></tr></thead><tbody>' +
     (list.length
       ? list
           .map(
@@ -1155,22 +1180,22 @@ function renderQdii() {
         </tr>`
           )
           .join('')
-      : '<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:18px">无匹配基金</td></tr>') +
+      : '<tr><td colspan="6" style="text-align:center;color:var(--text-tertiary);padding:20px">没有符合筛选条件的基金</td></tr>') +
     '</tbody>';
 
   const t = S.qdii.stored_at ? new Date(S.qdii.stored_at * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '';
-  $('qdiiNote').textContent = `整理自东方财富${t ? `（更新于 ${t}）` : ''}，实际限额以销售平台为准。`;
+  $('qdiiNote').textContent = `整理自东方财富${t ? `（更新于 ${t}）` : ''}，实际限额以支付宝、天天基金等购买页面为准。`;
 }
 
 const SOURCES = [
-  ['yahoo', 'Yahoo Finance', 'MSTR 与 BTC 日线/周线', () => S.mstr && bj(S.mstr.meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 5],
-  ['btcExtra', 'Yahoo Finance', 'BTC 4H K 线与 CME 期货缺口', () => S.cme?.bars?.at(-1)?.time, 5],
-  ['vix', 'Yahoo Finance', '美股恐慌指数 VIX', () => S.vix && bj(S.vix.meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 5],
-  ['kpi', 'Strategy 官网', 'mNAV、持币量与情绪指数', () => S.kpi?.mstr?.timeStamp, null],
-  ['history', 'Strategy 官网', 'mNAV 历史与每股含币序列', () => S.history?.[0]?.date, 5],
+  ['yahoo', 'Yahoo Finance', 'MSTR 与比特币日线/周线', () => S.mstr && bj(S.mstr.meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 5],
+  ['btcExtra', 'Yahoo Finance', '比特币 4小时线与期货周末缺口', () => S.cme?.bars?.at(-1)?.time, 5],
+  ['vix', 'Yahoo Finance', '美股恐慌指数 VIX（日线）', () => S.vix && bj(S.vix.meta.regularMarketTime, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 5],
+  ['kpi', 'Strategy 官网', '实时溢价 mNAV、持币数与情绪', () => S.kpi?.mstr?.timeStamp, null],
+  ['history', 'Strategy 官网', 'mNAV 历史与每股含币日线', () => S.history?.[0]?.date, 5],
   ['earn', 'Nasdaq', 'MSTR 财报日期', () => S.earn?.[0]?.date, null],
-  ['mag', 'Yahoo Finance', '多资产横向对比', () => S.mag?.AAPL?.bars.at(-1)?.time, 5],
-  ['qdii', 'GlobalAssetHistory', '场外 QDII 申购状态', () => S.qdii?.stored_at && bj(S.qdii.stored_at, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 3],
+  ['mag', 'Yahoo Finance', '七姐妹与多资产日线对比', () => S.mag?.AAPL?.bars.at(-1)?.time, 5],
+  ['qdii', 'GlobalAssetHistory', '场外 QDII 每日申购状态', () => S.qdii?.stored_at && bj(S.qdii.stored_at, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }), 3],
 ];
 
 function dayAge(key) {
@@ -1198,7 +1223,7 @@ function renderSources() {
   $('sourceBrief').textContent = bad ? `${bad} 路异常` : allReady ? '8 路数据源正常' : '数据源读取中';
 
   $('sourceTable').innerHTML =
-    '<thead><tr><th>来源</th><th>内容</th><th>数据时间</th><th>状态</th></tr></thead><tbody>' +
+    '<thead><tr><th>来源</th><th>数据内容</th><th>最新时间</th><th>状态</th></tr></thead><tbody>' +
     SOURCES.map(([key, name, what, dateFn, limit]) => {
       const st = S.health[key];
       const age = dayAge(key);
@@ -1206,7 +1231,7 @@ function renderSources() {
       const dStr = dateFn();
       const [word, badgeCls] =
         st === false
-          ? [dStr ? '缓存回退' : '不可用', 'badge-up']
+          ? [dStr ? '展示缓存' : '不可用', 'badge-up']
           : st == null
           ? ['读取中', 'badge-neutral']
           : old
@@ -1225,22 +1250,34 @@ function renderMaPicks() {
     const box = $(boxId);
     if (!box) continue;
     const v = VIEWS[view];
-    const unit = view === '4h' ? '根' : view === 'week' ? '周' : '日';
-    box.querySelector('.cross-name').textContent = `金叉死叉(${v.short}/${v.long})`;
+    const unit = view === '4h' ? '根4H' : view === 'week' ? '周' : '日';
+    box.querySelector('.cross-name').textContent = `金叉死叉(${v.short}/${v.long}${unit})`;
     box.querySelector('.ma-picks').innerHTML = MA_KEYS.map(
-      ([k, color]) => `<label><input type="checkbox" data-ma="${k}" ${showObj[k] ? 'checked' : ''}><i class="ma-swatch" style="background:var(${color})"></i>MA${v[k]}${unit === '周' ? 'W' : ''}</label>`
+      ([k, color]) => `<label><input type="checkbox" data-ma="${k}" ${showObj[k] ? 'checked' : ''}><i class="ma-swatch" style="background:var(${color})"></i>${v[k]}${unit}均线</label>`
     ).join('');
   }
+
+  const mBadge = $('mstrTfBadge');
+  if (mBadge) {
+    mBadge.textContent = S.mstrView === 'week' ? '周线' : '日线';
+    mBadge.className = 'tf-pill ' + (S.mstrView === 'week' ? 'tf-week' : 'tf-day');
+  }
+  const bBadge = $('btcTfBadge');
+  if (bBadge) {
+    bBadge.textContent = S.btcView === '4h' ? '4小时线' : S.btcView === 'week' ? '周线' : '日线';
+    bBadge.className = 'tf-pill ' + (S.btcView === '4h' ? 'tf-h4' : S.btcView === 'week' ? 'tf-week' : 'tf-day');
+  }
+
   const bRanges = $('bRanges');
   const bHint = $('bViewHint');
   if (bRanges) bRanges.hidden = S.btcView === '4h';
   if (bHint) {
     bHint.textContent =
       S.btcView === '4h'
-        ? '近 60 天 UTC 4 小时 K 线 · 叠加 4H Vegas 与波段关键位'
+        ? '当前看 4 小时线（一根代表 4 小时，适合看近几天短线）'
         : S.btcView === 'week'
-        ? 'UTC 周一归并周 K · 叠加周线关键位'
-        : 'UTC 0 点日线 · 提阿非罗常用指标已接入';
+        ? '当前看周线（一根代表一周，适合看几个月到几年大势）'
+        : '当前看日线（一根代表一天，最常用的看盘周期）';
   }
 }
 
@@ -1333,7 +1370,7 @@ async function refresh() {
     renderStatus();
     renderSources();
     if (!S.mstr) {
-      $('sentence').textContent = '暂时取不到行情，请检查网络，每分钟自动重试。';
+      $('sentence').textContent = '暂时取不到行情，请检查网络，每分钟会自动重试。';
       $('chip').className = 'session-pill bad';
       $('chip').textContent = '连接中断';
     }
@@ -1352,7 +1389,8 @@ function bindEvents() {
 
     const helpBtn = e.target.closest('.q-help-btn');
     if (helpBtn) {
-      const scope = helpBtn.closest('.ov-cell, .readout-block, .card');
+      const inMetric = helpBtn.closest('.metric-cell');
+      const scope = inMetric ? inMetric.closest('.card') : helpBtn.closest('.readout-block, .card');
       const existing = scope?.querySelector(`.explain-box[data-term="${helpBtn.dataset.term}"]`);
       if (existing) {
         existing.remove();
@@ -1363,7 +1401,7 @@ function bindEvents() {
       p.className = 'explain-box';
       p.dataset.term = helpBtn.dataset.term;
       p.textContent = TERMS[helpBtn.dataset.term] || '';
-      const anchor = helpBtn.closest('.ov-top, .readout-head, .card-header');
+      const anchor = inMetric ? inMetric.closest('.metrics-strip') : helpBtn.closest('.readout-head, .card-header');
       anchor?.after(p);
       return;
     }
@@ -1625,7 +1663,7 @@ function bindEvents() {
     for (const id of ['tradeShares', 'tradePrice', 'tradeNote']) $(id).value = '';
     persistUserData(true);
     renderPlan();
-    showToast('已记录交易');
+    showToast('已记一笔');
   });
 
   $('tradeTable').addEventListener('click', (e) => {

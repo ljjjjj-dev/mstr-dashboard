@@ -530,31 +530,28 @@ export class ChartManager {
     };
 
     const lookback = is4h ? 150 : state.btcView === 'week' ? 52 : 90;
+    const cyc = is4h ? '4H' : state.btcView === 'week' ? '周' : '日';
     const fib = fibGoldenPocket(bars, lookback);
     const vp = volumeProfile(bars.slice(-lookback), 36, 0.70);
     const struct = swingLiquidityAnd2B(bars, S.btcPrice || last.close, 3, 8);
     const { Solid, Dashed, Dotted } = LightweightCharts.LineStyle;
 
     if (tiaShow.fib && fib) {
-      addLine(fib.gp618, css('--btc'), Dashed, '0.618');
-      addLine(fib.gp660, css('--btc'), Dashed, '0.66口袋');
+      addLine(fib.mid, css('--btc'), Dashed, `黄金关口(${cyc})`);
     }
     if (tiaShow.vp && vp) {
-      addLine(vp.poc, css('--purple'), Solid, 'POC');
-      addLine(vp.vah, css('--purple'), Dotted, 'VAH');
-      addLine(vp.val, css('--purple'), Dotted, 'VAL');
+      addLine(vp.poc, css('--purple'), Solid, `成交最密(${cyc})`);
     }
     if (tiaShow.liquidity && struct) {
-      addLine(struct.abovePool?.price, css('--up'), Dotted, '前高');
-      addLine(struct.belowPool?.price, css('--down'), Dotted, '前低');
+      addLine(struct.abovePool?.price, css('--up'), Dotted, `前高压力(${cyc})`);
+      addLine(struct.belowPool?.price, css('--down'), Dotted, `前低防守(${cyc})`);
     }
     if (tiaShow.opens && S.tia) {
       if (S.tia.opens) {
-        addLine(S.tia.opens.weeklyOpen, css('--blue'), Dotted, '周开');
-        addLine(S.tia.opens.monthlyOpen, css('--ma-mid'), Dotted, '月开');
+        addLine(S.tia.opens.weeklyOpen, css('--blue'), Dotted, '本周开盘(周)');
       }
       if (S.tia.gaps?.cmeNearest) {
-        addLine(S.tia.gaps.cmeNearest.mid, css('--teal'), Dashed, 'CME缺口');
+        addLine(S.tia.gaps.cmeNearest.mid, css('--teal'), Dashed, '周末缺口(日)');
       }
     }
 
@@ -570,10 +567,15 @@ export class ChartManager {
       }
     }
     if (tiaShow.liquidity && struct?.sweeps?.length) {
-      for (const s of struct.sweeps.slice(-8)) {
+      const spaced = [];
+      for (let k = struct.sweeps.length - 1; k >= 0 && spaced.length < 3; k--) {
+        const s = struct.sweeps[k];
+        if (!spaced.length || Math.abs(spaced.at(-1).i - s.i) >= 12) spaced.push(s);
+      }
+      for (const s of spaced.reverse()) {
         marks.push(
           s.type === 'bear_sweep'
-            ? { time: s.time, position: 'aboveBar', shape: 'arrowDown', color: css('--down'), text: '2B假突' }
+            ? { time: s.time, position: 'aboveBar', shape: 'arrowDown', color: css('--down'), text: '假突破' }
             : { time: s.time, position: 'belowBar', shape: 'arrowUp', color: css('--up'), text: '破底翻' }
         );
       }

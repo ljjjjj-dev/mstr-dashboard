@@ -292,7 +292,7 @@ test('swingLiquidityAnd2B：能识别 2B 向上假突破与向下破底翻', () 
   assert.equal(res.recentSweep?.level, 120);
 });
 
-test('unfilledGaps & keyOpens & tiaBtcSummary：能识别未回补缺口并输出 7 项文字解盘', () => {
+test('unfilledGaps & keyOpens & tiaBtcSummary：能识别未回补缺口并输出白话卡片、周期标签与价位地图', () => {
   const cme = [
     { time: '2026-11-06', open: 60000, high: 61000, low: 59500, close: 60800 },
     { time: '2026-11-09', open: 63000, high: 64000, low: 62500, close: 63500 }, // 61000-62500 跳空
@@ -310,6 +310,8 @@ test('unfilledGaps & keyOpens & tiaBtcSummary：能识别未回补缺口并输�
   const opens = calc.keyOpens(daily);
   assert.ok(opens.weeklyOpen > 0 && opens.monthlyOpen > 0 && opens.yearlyOpen > 0);
   const summary = calc.tiaBtcSummary(daily, daily.at(-1).close, { cmeBars: cme });
-  assert.equal(summary.items.length, 7);
-  assert.ok(summary.headline.includes('0.618–0.66'));
+  assert.equal(summary.items.length, 4);
+  assert.ok(summary.items.every(it => Array.isArray(it.tfs) && it.tfs.length > 0));
+  assert.ok(summary.mapPoints.some(pt => pt.kind === 'current'));
+  assert.ok(summary.headline.includes('黄金区间'));
 });
